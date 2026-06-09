@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YakGPT 🦬: Can You Survive Thorong La?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/frontend/index.css">
+</head>
+
+<body>
+
+<div class="game-container" id="gameContainer">
+
+  <!-- SCENE HEADER -->
+  <div class="scene-header">
+    <div class="scene-bg scene-manang" id="sceneBg"></div>
+    <div class="scene-overlay"></div>
+
+    <div class="scene-weather-badge" id="weatherBadge">
+      <div class="weather-dot" id="weatherDot"></div>
+      <span id="weatherLabel">Clear skies</span>
+    </div>
+
+    <div class="scene-day-badge" id="dayBadge">Day 1 · Manang</div>
+
+    <div class="scene-info">
+      <div class="scene-altitude" id="sceneAlt">3,540 m</div>
+      <div class="scene-name" id="sceneName">Manang</div>
+      <div class="scene-tagline" id="sceneTagline">Where the mountains begin their negotiations...</div>
+    </div>
+  </div>
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+
+    <!-- VITALS -->
+    <div class="card">
+      <div class="card-header">
+        Survival Stats
+        <span style="font-size:9px; color:var(--snow-faint); font-family:var(--font-mono);">v1.0</span>
+      </div>
+      <div class="vitals-grid">
+
+        <div class="vital-row">
+          <div class="vital-top">
+            <span class="vital-label">Health</span>
+            <span class="vital-val" id="valHealth">100</span>
+          </div>
+          <div class="vital-track">
+            <div class="vital-fill fill-health" id="fillHealth" style="width:100%"></div>
+          </div>
+          <div class="vital-warning" id="warnHealth">⚠ Critical: Descend immediately!</div>
+        </div>
+
+        <div class="vital-row">
+          <div class="vital-top">
+            <span class="vital-label">Acclimatization</span>
+            <span class="vital-val" id="valAcclim">75</span>
+          </div>
+          <div class="vital-track">
+            <div class="vital-fill fill-acclim" id="fillAcclim" style="width:75%"></div>
+          </div>
+          <div class="vital-warning" id="warnAcclim">⚠ AMS risk high! Your blood is not impressed.</div>
+        </div>
+
+        <div class="vital-row">
+          <div class="vital-top">
+            <span class="vital-label">Energy</span>
+            <span class="vital-val" id="valEnergy">100</span>
+          </div>
+          <div class="vital-track">
+            <div class="vital-fill fill-energy" id="fillEnergy" style="width:100%"></div>
+          </div>
+          <div class="vital-warning" id="warnEnergy">⚠ Exhausted. Every step is a negotiation.</div>
+        </div>
+
+        <div class="vital-row">
+          <div class="vital-top">
+            <span class="vital-label">Guide Trust</span>
+            <span class="vital-val" id="valTrust">100</span>
+          </div>
+          <div class="vital-track">
+            <div class="vital-fill fill-trust" id="fillTrust" style="width:100%"></div>
+          </div>
+          <div class="vital-warning" id="warnTrust">⚠ Dorje has stopped volunteering information.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TRAIL PROGRESS -->
+    <div class="trail-card">
+      <div class="trail-title">Route: Manang to Thorong La</div>
+      <div class="trail-nodes" id="trailNodes">
+
+        <div class="trail-node">
+          <div class="trail-node-left">
+            <div class="trail-dot current" id="dot0">★</div>
+            <div class="trail-connector" id="conn0"></div>
+          </div>
+          <div class="trail-node-info">
+            <div class="trail-node-name current" id="nodeName0">Manang</div>
+            <div class="trail-node-alt current" id="nodeAlt0">3,540 m</div>
+            <div class="trail-node-risk">
+              <div class="risk-pip active"></div>
+              <div class="risk-pip"></div>
+              <div class="risk-pip"></div>
+              <div class="risk-pip"></div>
+              <div class="risk-pip"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="trail-node">
+          <div class="trail-node-left">
+            <div class="trail-dot locked" id="dot1">○</div>
+            <div class="trail-connector" id="conn1"></div>
+          </div>
+          <div class="trail-node-info">
+            <div class="trail-node-name" id="nodeName1">Yak Kharka</div>
+            <div class="trail-node-alt" id="nodeAlt1">4,050 m</div>
+            <div class="trail-node-risk">
+              <div class="risk-pip active"></div>
+              <div class="risk-pip active"></div>
+              <div class="risk-pip"></div>
+              <div class="risk-pip"></div>
+              <div class="risk-pip"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="trail-node">
+          <div class="trail-node-left">
+            <div class="trail-dot locked" id="dot2">○</div>
+            <div class="trail-connector" id="conn2"></div>
+          </div>
+          <div class="trail-node-info">
+            <div class="trail-node-name" id="nodeName2">Thorong Phedi</div>
+            <div class="trail-node-alt" id="nodeAlt2">4,450 m</div>
+            <div class="trail-node-risk">
+              <div class="risk-pip active"></div>
+              <div class="risk-pip active"></div>
+              <div class="risk-pip active"></div>
+              <div class="risk-pip"></div>
+              <div class="risk-pip"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="trail-node">
+          <div class="trail-node-left">
+            <div class="trail-dot locked" id="dot3">○</div>
+            <div class="trail-connector" id="conn3"></div>
+          </div>
+          <div class="trail-node-info">
+            <div class="trail-node-name" id="nodeName3">High Camp</div>
+            <div class="trail-node-alt" id="nodeAlt3">4,850 m</div>
+            <div class="trail-node-risk">
+              <div class="risk-pip active"></div>
+              <div class="risk-pip active"></div>
+              <div class="risk-pip active"></div>
+              <div class="risk-pip active"></div>
+              <div class="risk-pip"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="trail-node">
+          <div class="trail-node-left">
+            <div class="trail-dot locked peak" id="dot4"><span>▲</span></div>
+          </div>
+          <div class="trail-node-info">
+            <div class="trail-node-name" id="nodeName4">Thorong La Pass</div>
+            <div class="trail-node-alt" id="nodeAlt4">5,416 m</div>
+            <div class="trail-node-risk">
+              <div class="risk-pip danger"></div>
+              <div class="risk-pip danger"></div>
+              <div class="risk-pip danger"></div>
+              <div class="risk-pip danger"></div>
+              <div class="risk-pip danger"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- INVENTORY -->
+    <div class="card">
+      <div class="card-header">
+        Pack Contents
+        <span style="font-size:9px; color:var(--gold-dim); cursor:pointer;" onclick="openInventoryModal()">USE ITEM</span>
+      </div>
+      <div class="inventory-grid" id="inventoryGrid">
+        <div class="inv-item" id="inv-water">
+          <div class="inv-icon">💧</div>
+          <div class="inv-name">Water</div>
+          <div class="inv-effect">+10 Energy</div>
+          <div class="inv-qty" id="qty-water">×3</div>
+        </div>
+        <div class="inv-item" id="inv-diamox">
+          <div class="inv-icon">💊</div>
+          <div class="inv-name">Diamox</div>
+          <div class="inv-effect">+15 Acclimatization</div>
+          <div class="inv-qty" id="qty-diamox">×2</div>
+        </div>
+        <div class="inv-item" id="inv-layers">
+          <div class="inv-icon">🧥</div>
+          <div class="inv-name">Warm Layers</div>
+          <div class="inv-effect">-10 Energy drain at High Camp</div>
+          <div class="inv-qty" id="qty-layers">×1</div>
+        </div>
+        <div class="inv-item" id="inv-food">
+          <div class="inv-icon">🍚</div>
+          <div class="inv-name">Dal Bhat</div>
+          <div class="inv-effect">+20 Energy</div>
+          <div class="inv-qty" id="qty-food">×2</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEATHER -->
+    <div class="card">
+      <div class="card-header">
+        Mountain Weather
+        <span style="font-size:9px; color:var(--snow-faint);">HIDDEN COUNTER</span>
+      </div>
+      <div class="weather-body">
+        <div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span style="font-family:var(--font-display); font-size:8.5px; letter-spacing:1.5px; color:var(--snow-dim); text-transform:uppercase;">Storm Pressure</span>
+            <span style="font-family:var(--font-mono); font-size:10px; color:var(--warn);" id="stormPct">12%</span>
+          </div>
+          <div class="storm-track">
+            <div class="storm-fill" id="stormFill" style="width:12%"></div>
+          </div>
+        </div>
+        <div class="weather-status" id="weatherStatus">"The sky is still on your side. For now."</div>
+        <div class="weather-forecast">
+          <div class="forecast-day">
+            <div class="forecast-label">Today</div>
+            <div class="forecast-icon">☀️</div>
+            <div class="forecast-temp">-8°C</div>
+          </div>
+          <div class="forecast-day">
+            <div class="forecast-label">+1 Day</div>
+            <div class="forecast-icon" id="fc1">🌤</div>
+            <div class="forecast-temp" id="ft1">-10°C</div>
+          </div>
+          <div class="forecast-day">
+            <div class="forecast-label">+2 Day</div>
+            <div class="forecast-icon" id="fc2">⛅</div>
+            <div class="forecast-temp" id="ft2">-12°C</div>
+          </div>
+          <div class="forecast-day">
+            <div class="forecast-label">+3 Day</div>
+            <div class="forecast-icon" id="fc3">🌨</div>
+            <div class="forecast-temp" id="ft3">-18°C</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel" id="rightPanel">
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('trail')">Trail Log</button>
+      <button class="tab-btn" onclick="switchTab('guide')">Dorje's Journal</button>
+      <button class="tab-btn" onclick="switchTab('knowledge')">Knowledge Log</button>
+    </div>
+
+    <!-- NARRATIVE CARD -->
+    <div class="narrative-panel">
+
+      <!-- TRAIL LOG -->
+      <div class="panel-body active" id="panel-trail">
+
+        <div class="yak-section">
+          <div class="yak-avatar">
+            🦬
+            <div class="yak-thinking" id="yakThinking">⋯</div>
+          </div>
+          <div class="yak-bubble">
+            <div class="yak-name-row">
+              <span class="yak-name">YakGPT: Mountain Narrator</span>
+              <span class="yak-mood" id="yakMood">Mildly contemptuous</span>
+            </div>
+            <div class="yak-text" id="yakText">
+              "Ah, another tourist arrives at Manang with expensive gear and approximately zero respect for altitude. How refreshing. Your guide, Dorje, has seen thirty of you. He suggests an acclimatisation day. But you have a flight to catch, don't you? They always have a flight to catch."
+            </div>
+          </div>
+        </div>
+
+        <div class="situation-section">
+          <div class="situation-text" id="situationText">
+            You are at Manang (3,540m), two days from Thorong La. The air is noticeably thinner here,  about 65% of sea-level oxygen. Dorje points to the Gangapurna glacier and says, quietly, that the mountain does not care about your schedule.
+          </div>
+        </div>
+
+        <div class="fact-section">
+          <div class="fact-card">
+            <div class="fact-label">📖 Altitude Fact</div>
+            <div class="fact-text" id="factText">
+              Spending 2+ nights at Manang before ascending significantly reduces AMS risk. The "climb high, sleep low" principle is the cornerstone of Himalayan safety guidance. Your body needs time, not motivation, to produce more red blood cells.
+            </div>
+          </div>
+        </div>
+
+        <div class="peer-section" id="peerSection">
+          <div class="peer-event">
+            <div class="peer-icon">🇩🇪</div>
+            <div class="peer-content">
+              <div class="peer-label">⚠ Peer Pressure Event</div>
+              <div class="peer-text" id="peerText">
+                "The German couple from your tea house left three hours ago. You can see their headlamps on the ridge. They look confident. Dorje watches them without comment."
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="choices-section">
+          <div class="choices-label">Your Decision</div>
+          <div id="choicesArea"></div>
+        </div>
+
+        <div class="step-row">
+          <button class="step-btn" id="stepBtn" onclick="takeStep()" disabled>
+            Confirm &amp; Continue →
+          </button>
+          <button class="use-item-btn" onclick="openInventoryModal()">
+            Use Item
+          </button>
+        </div>
+
+      </div>
+
+      <!-- GUIDE JOURNAL -->
+      <div class="panel-body" id="panel-guide">
+        <div class="journal-panel">
+          <div class="journal-header">
+            <span class="journal-title">Dorje Sherpa's Private Journal</span>
+            <span class="trust-badge trust-high" id="trustBadge">Trust: High</span>
+          </div>
+          <div class="journal-entries" id="journalEntries">
+            <div class="journal-entry new-entry">
+              <div class="journal-entry-day">Day 1 · Manang · 3,540m</div>
+              "Day 1 with the new trekker. They seem eager but respectful enough. They actually listened when I pointed out the ice fall on Gangapurna. Maybe this one will be different. I have shown this trail to 200 people. Half of them tried to argue with the mountain. The mountain always won."
+            </div>
+          </div>
+          <div class="backstory-card" id="backstoryCard">
+            <div class="backstory-label">🔓 Dorje's Story Unlocked</div>
+            <div class="backstory-text" id="backstoryText">
+              "1996. I was twenty-two. A client from Munich ignored my weather reading at the pass. The helicopter came two days later. I learned that day that a guide's real job is not to lead, it is to be heard."
+            </div>
+          </div>
+          <div style="font-size:11px; color:var(--snow-faint); font-style:italic; padding-top:4px;">
+            Dorje's opinion changes with every decision. Lose his trust and the safe choices stop being labelled.
+          </div>
+        </div>
+      </div>
+
+      <!-- KNOWLEDGE LOG -->
+      <div class="panel-body" id="panel-knowledge">
+        <div class="knowledge-panel" id="knowledgePanel">
+          <div style="font-family:var(--font-display); font-size:9px; letter-spacing:2px; color:var(--snow-dim); text-transform:uppercase; margin-bottom:4px;">Real Trekking Knowledge Collected</div>
+          <div class="knowledge-item new">
+            <div class="knowledge-category">Altitude Medicine</div>
+            <div class="knowledge-title">Climb High, Sleep Low</div>
+            <div class="knowledge-text">The core principle of Himalayan acclimatization. Ascend to a higher altitude during the day, then return to sleep lower. This stimulates red blood cell production without overwhelming the body.</div>
+          </div>
+          <div class="knowledge-item">
+            <div class="knowledge-category">AMS Warning Signs</div>
+            <div class="knowledge-title">The Lake Louise Score</div>
+            <div class="knowledge-text">The standard clinical tool for diagnosing Acute Mountain Sickness. Headache is the required primary symptom. Add nausea, fatigue, dizziness, or poor sleep for severity scoring.</div>
+          </div>
+          <div class="knowledge-item">
+            <div class="knowledge-category">Thorong La Timing</div>
+            <div class="knowledge-title">Cross Before 10am</div>
+            <div class="knowledge-text">Afternoon storms at Thorong La are common and can be deadly. Trekkers starting before 4am have significantly lower turnaround rates. The pass does not wait for late sleepers.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- END SCREENS -->
+  <div class="endscreen" id="endDeath">
+    <div class="endscreen-icon">☠️</div>
+    <div class="endscreen-title death">You Did Not Survive</div>
+    <div class="endscreen-narration" id="endNarrationDeath">
+      "The mountain gave its verdict, as it always does. Quietly. Without drama. The helicopter crew were very professional about it."
+    </div>
+    <div class="autopsy-card" id="autopsyCard">
+      <div class="autopsy-title">Decision Autopsy: What Killed You?</div>
+      <div id="autopsyRows"></div>
+    </div>
+    <button class="restart-btn" onclick="restartGame()">Try Again</button>
+  </div>
+
+  <div class="endscreen" id="endEvac">
+    <div class="endscreen-icon">🚁</div>
+    <div class="endscreen-title evac">Helicopter Evacuation</div>
+    <div class="endscreen-narration" id="endNarrationEvac">
+      "Dorje made the call before you did. That is what guides are for. The view from the helicopter was extraordinary, not how you planned to see it, but extraordinary nonetheless."
+    </div>
+    <div class="autopsy-card" id="evacCard">
+      <div class="autopsy-title">What Went Wrong</div>
+      <div id="evacRows"></div>
+    </div>
+    <button class="restart-btn" onclick="restartGame()">Try Again</button>
+  </div>
+
+  <div class="endscreen" id="endVictory">
+    <div class="endscreen-icon">🏔️</div>
+    <div class="endscreen-title victory">Thorong La: 5,416m</div>
+    <div class="endscreen-narration" id="endNarrationVictory">
+      "5,416 meters. The prayer flags are screaming in the wind. The Mustang valley opens below you like a reward the mountain never promised. Dorje is smiling for the first time. He says nothing. He does not need to."
+    </div>
+    <div class="autopsy-card">
+      <div class="autopsy-title">Your Journey: Decision Log</div>
+      <div id="victoryRows"></div>
+    </div>
+    <button class="restart-btn" onclick="restartGame()">Cross Again</button>
+  </div>
+
+</div>
+
+<!-- INVENTORY MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeInventoryModal(event)">
+  <div class="modal">
+    <div class="modal-title">Use an Item</div>
+    <div class="modal-items" id="modalItems">
+      <div class="modal-item" onclick="useItem('water')">
+        <div class="modal-item-icon">💧</div>
+        <div>
+          <div class="modal-item-name">Water</div>
+          <div class="modal-item-effect">Restores 10 Energy. Prevents altitude headache.</div>
+        </div>
+      </div>
+      <div class="modal-item" onclick="useItem('diamox')">
+        <div class="modal-item-icon">💊</div>
+        <div>
+          <div class="modal-item-name">Diamox (Acetazolamide)</div>
+          <div class="modal-item-effect">+15 Acclimatization. Side effects: tingling fingers, frequent urination.</div>
+        </div>
+      </div>
+      <div class="modal-item" id="modalLayers" onclick="useItem('layers')">
+        <div class="modal-item-icon">🧥</div>
+        <div>
+          <div class="modal-item-name">Warm Layers</div>
+          <div class="modal-item-effect">Reduces energy drain. Best saved for High Camp or Pass.</div>
+        </div>
+      </div>
+      <div class="modal-item" onclick="useItem('food')">
+        <div class="modal-item-icon">🍚</div>
+        <div>
+          <div class="modal-item-name">Dal Bhat</div>
+          <div class="modal-item-effect">+20 Energy. The official fuel of Himalayan trekking.</div>
+        </div>
+      </div>
+    </div>
+    <button class="modal-cancel" onclick="document.getElementById('modalOverlay').classList.remove('active')">Cancel</button>
+  </div>
+</div>
+
+<script type="module" src="/frontend/index.js"></script>
+
+</body>
+</html>
