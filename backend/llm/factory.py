@@ -5,6 +5,8 @@ from functools import lru_cache
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic 
+from langchain_google_genai import ChatGoogleGenerativeAI 
 from pydantic import SecretStr
 
 
@@ -60,6 +62,47 @@ def get_llm_provider() -> BaseChatModel:
         return ChatOpenAI(
             base_url=api_url,
             api_key=SecretStr(api_key),
+            model=model,
+        )
+    
+    # --------------------------------------------------------
+    # OPENAI (Official)
+    # --------------------------------------------------------
+    elif provider == "openai":
+        api_key = os.getenv("OPENAI_API_KEY")
+        model = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
+
+        if not api_key:
+            raise LLMConfigError("Missing required environment variable: OPENAI_API_KEY")
+
+        return ChatOpenAI(api_key=SecretStr(api_key), model=model)
+
+    # --------------------------------------------------------
+    # ANTHROPIC (Official)
+    # --------------------------------------------------------
+    elif provider == "anthropic":
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        model = os.getenv("ANTHROPIC_MODEL_NAME", "claude-3-5-sonnet-latest")
+        timeout = 2.0
+        stop = None
+
+        if not api_key:
+            raise LLMConfigError("Missing required environment variable: ANTHROPIC_API_KEY")
+
+        return ChatAnthropic(model_name=model, timeout=timeout, stop=stop, api_key=SecretStr(api_key), )
+
+    # --------------------------------------------------------
+    # GEMINI (Official Google GenAI)
+    # --------------------------------------------------------
+    elif provider == "gemini":
+        api_key = os.getenv("GEMINI_API_KEY")
+        model = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+
+        if not api_key:
+            raise LLMConfigError("Missing required environment variable: GEMINI_API_KEY")
+
+        return ChatGoogleGenerativeAI(
+            google_api_key=SecretStr(api_key),
             model=model,
         )
 
