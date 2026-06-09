@@ -4,10 +4,14 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from gradio import Server
 
+from backend.api.game_routes import router as game_router
+
 app = Server(
     title="YakGPT Backend",
     description="Custom UI powered by Gradio Server Backend Mode"
 )
+
+app.include_router(game_router)
 
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 app.mount("/scenes", StaticFiles(directory="scenes"), name="scenes")

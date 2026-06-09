@@ -5,6 +5,7 @@ from functools import lru_cache
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
 
 class LLMConfigError(Exception):
@@ -45,19 +46,23 @@ def get_llm_provider() -> BaseChatModel:
     # --------------------------------------------------------
     # MODAL (OpenAI-compatible endpoint)
     # --------------------------------------------------------
-    # elif provider == "modal":
-    #     api_url = os.getenv("MODAL_API_URL")
-    #     api_key = os.getenv("MODAL_API_KEY", "dummy-key-if-unauthenticated")
-    #     model = os.getenv("MODAL_MODEL_NAME")
+    elif provider == "modal":
+        api_url = os.getenv("MODAL_API_URL")
+        api_key = os.getenv("MODAL_API_KEY", "dummy-key-if-unauthenticated")
+        model = os.getenv("MODAL_MODEL_NAME")
 
-    #     _validate_env(api_url, "MODAL_API_URL")
-    #     _validate_env(model, "MODAL_MODEL_NAME")
+        # Inline Type Guarding: This leaves no doubt for Pylance's analyzer
+        if not api_url:
+            raise LLMConfigError("Missing required environment variable: MODAL_API_URL")
+        if not model:
+            raise LLMConfigError("Missing required environment variable: MODAL_MODEL_NAME")
 
-    #     return ChatOpenAI(
-    #         base_url=api_url,
-    #         api_key=api_key,
-    #         model=model,
-    #     )
+        return ChatOpenAI(
+            base_url=api_url,
+            api_key=SecretStr(api_key),
+            model=model,
+        )
+
 
     # --------------------------------------------------------
     # UNKNOWN PROVIDER
