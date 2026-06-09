@@ -3,13 +3,36 @@
 
 // ============================================================
 // LOCATIONS
+// scene: CSS class applied to #sceneBg — must match index.css
+//        (.scene-manang, .scene-yak-kharkha, etc.)
+//        Class names derived from the image filenames in /scenes/
 // ============================================================
 export const LOCATIONS = [
-  { name: "Manang",          alt: "3,540 m", altNum: 3540, day: 1 },
-  { name: "Yak Kharka",      alt: "4,050 m", altNum: 4050, day: 3 },
-  { name: "Thorong Phedi",   alt: "4,450 m", altNum: 4450, day: 4 },
-  { name: "High Camp",       alt: "4,850 m", altNum: 4850, day: 5 },
-  { name: "Thorong La Pass", alt: "5,416 m", altNum: 5416, day: 6 },
+  {
+    name: "Manang",          alt: "3,540 m", altNum: 3540, day: 1,
+    scene:   "scene-manang",
+    tagline: "Where the mountains begin their negotiations...",
+  },
+  {
+    name: "Yak Kharka",      alt: "4,050 m", altNum: 4050, day: 3,
+    scene:   "scene-yak-kharkha",
+    tagline: "The air thins. The yaks do not care.",
+  },
+  {
+    name: "Thorong Phedi",   alt: "4,450 m", altNum: 4450, day: 4,
+    scene:   "scene-thorong-phedi",
+    tagline: "Base of the pass. Tomorrow decides everything.",
+  },
+  {
+    name: "High Camp",       alt: "4,850 m", altNum: 4850, day: 5,
+    scene:   "scene-high-camp",
+    tagline: "Wind. Cold. The mountain is watching now.",
+  },
+  {
+    name: "Thorong La Pass", alt: "5,416 m", altNum: 5416, day: 6,
+    scene:   "scene-thorong-la",
+    tagline: "5,416 metres. The mountain gave its permission.",
+  },
 ];
 
 // ============================================================

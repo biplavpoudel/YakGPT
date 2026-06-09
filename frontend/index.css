@@ -130,13 +130,13 @@ body.weather-warn  .scene-bg { filter: brightness(0.8) saturate(0.65) sepia(0.15
 body.weather-storm .scene-bg { filter: brightness(0.5) saturate(0.2) hue-rotate(210deg); }
 
 .scene-manang    { background-image: url('/scenes/manang.jpg');        background-size: cover; background-position: center; }
-.scene-yakharka  { background-image: url('/scenes/yak-kharkha.jpg');   background-size: cover; background-position: center; }
-.scene-phedi     { background-image: url('/scenes/thorong-phedi.jpg'); background-size: cover; background-position: center; }
-.scene-highcamp  { background-image: url('/scenes/high-camp.jpg');     background-size: cover; background-position: center; }
-.scene-thorongla { background-image: url('/scenes/thorong-la.jpg');    background-size: cover; background-position: center; }
+.scene-yak-kharkha  { background-image: url('/scenes/yak-kharkha.jpg');   background-size: cover; background-position: center; }
+.scene-thorong-phedi     { background-image: url('/scenes/thorong-phedi.jpg'); background-size: cover; background-position: center; }
+.scene-high-camp  { background-image: url('/scenes/high-camp.jpg');     background-size: cover; background-position: center; }
+.scene-thorong-la { background-image: url('/scenes/thorong-la.jpg');    background-size: cover; background-position: center; }
 .scene-gameover  { background-image: url('/scenes/game-over.jpg');     background-size: cover; background-position: center; }
 .scene-victory   { background-image: url('/scenes/victory.jpg');       background-size: cover; background-position: center; }
-.scene-muktinath { background-image: url('/scenes/muktinath.jpg');     background-size: cover; background-position: center; }
+/* .scene-muktinath { background-image: url('/scenes/muktinath.jpg');     background-size: cover; background-position: center; } */
 
 .scene-overlay {
   position: absolute;

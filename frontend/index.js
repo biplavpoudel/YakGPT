@@ -216,6 +216,10 @@ function restartGame() {
   document.querySelectorAll('#knowledgePanel .knowledge-item.dynamic').forEach(el => el.remove());
   document.querySelectorAll('.endscreen').forEach(el => el.classList.remove('active'));
   document.getElementById('gameContainer')?.setAttribute('class', 'game-container');
+  ['autopsyRows', 'evacRows', 'victoryRows'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
 
   renderScene(gameState, LOCATIONS, SCENARIOS);
   updateVitals(gameState);
@@ -226,12 +230,58 @@ function restartGame() {
 }
 
 // ============================================================
+// END SCREEN DECISION LOG
+// ============================================================
+const CHOICE_TYPE_LABELS = {
+  safe:     { label: 'Safe',     color: '#4caf50' },
+  risky:    { label: 'Risky',   color: '#ff9800' },
+  reckless: { label: 'Reckless', color: '#f44336' },
+};
+
+function renderEndRows(type) {
+  const containerId = type === 'death'      ? 'autopsyRows'
+                    : type === 'evacuation' ? 'evacRows'
+                    : 'victoryRows';
+
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const history = gameState.actionHistory ?? [];
+  if (history.length === 0) {
+    container.innerHTML = '<div style="color:var(--snow-faint);font-size:11px;">No decisions recorded.</div>';
+    return;
+  }
+
+  container.innerHTML = history.map(entry => {
+    const loc     = LOCATIONS[entry.locationIndex] ?? { name: 'Unknown', alt: '' };
+    const meta    = CHOICE_TYPE_LABELS[entry.choiceType] ?? { label: entry.choiceType, color: '#888' };
+    return `
+      <div style="display:flex; gap:10px; align-items:flex-start; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+        <div style="min-width:90px; font-family:var(--font-mono); font-size:9px; color:var(--snow-faint); padding-top:2px;">
+          ${loc.name}<br>${loc.alt}
+        </div>
+        <div style="flex:1; font-size:11px; color:var(--snow-dim);">
+          ${entry.choiceText}
+        </div>
+        <div style="font-family:var(--font-mono); font-size:9px; font-weight:600; color:${meta.color}; white-space:nowrap; padding-top:2px;">
+          ${meta.label}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ============================================================
 // EVENT BUS BINDINGS
 // ============================================================
 function initEventBindings() {
   EventBus.on('state_patch', patch => {
     if (!patch) return;
     gameState = { ...gameState, ...patch };
+    // renderScene updates the header (name, alt, day badge, background image,
+    // fact text, peer event, choices) whenever location changes.
+    // It sets placeholder yak/situation text which the subsequent
+    // 'narration' event will immediately overwrite with LLM content.
+    renderScene(gameState, LOCATIONS, SCENARIOS);
     updateVitals(gameState);
     updateTrailFromState(gameState);
     updateWeatherFromState(gameState);
@@ -260,7 +310,9 @@ function initEventBindings() {
   });
 
   EventBus.on('end_state', payload => {
-    triggerEndscreen(payload?.type ?? payload);
+    const type = payload?.type ?? payload;
+    triggerEndscreen(type);
+    renderEndRows(type);
   });
 }
 

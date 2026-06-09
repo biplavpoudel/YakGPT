@@ -3,7 +3,6 @@
 import { renderChoices } from './choices.js';
 import { updateVitals }  from './vitals.js';
 
-// Track the active audio instance at the module level to prevent overlapping tracks
 let activeYakAudio = null;
 
 // ============================================================
@@ -14,31 +13,43 @@ export function getYakMood(state) {
   if (state.guideTrust      < 40) return 'Deeply disappointed';
   if (state.acclimatization < 30) return 'Medically alarmed';
   if (state.energy          < 20) return 'Pitying';
-  if (state.locationIndex   === 4) return 'Unexpectedly moved';
-  if (state.locationIndex    >= 3) return 'Cautiously invested';
+  if (state.locationIndex  === 4) return 'Unexpectedly moved';
+  if (state.locationIndex   >= 3) return 'Cautiously invested';
   return 'Mildly contemptuous';
 }
 
 // ============================================================
 // RENDER SCENE
-// Called on boot and restart with (state, LOCATIONS, SCENARIOS).
-// Does NOT touch journals or knowledge — those come from EventBus.
 // ============================================================
 export function renderScene(state, locations, scenarios) {
   if (!state || !locations || !scenarios) return;
 
-  const loc  = locations[state.locationIndex]  ?? locations[0];
-  const scen = scenarios[state.locationIndex]  ?? scenarios[0];
+  const idx  = state.locationIndex ?? 0;
+  const loc  = locations[idx] ?? locations[0];
+  const scen = scenarios[idx] ?? scenarios[0];
   if (!loc || !scen) return;
 
-  // Scene background crossfade
+  // Capture the scene class NOW, before any async gap
+  const sceneClass = loc.scene || 'scene-manang';
+
+  // Background swap — use CSS transition on opacity via class toggle,
+  // no setTimeout so the class is never set from a stale closure
   const bg = document.getElementById('sceneBg');
   if (bg) {
-    bg.style.opacity = '0';
-    setTimeout(() => {
-      bg.className     = 'scene-bg ' + (loc.scene || 'scene-manang');
-      bg.style.opacity = '1';
-    }, 400);
+    // Only swap if the scene actually changed — avoids flicker on same location
+    const current = bg.getAttribute('data-scene');
+    if (current !== sceneClass) {
+      bg.style.transition = 'opacity 0.4s';
+      bg.style.opacity    = '0';
+      // Use requestAnimationFrame to ensure opacity:0 is painted first
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          bg.className        = 'scene-bg ' + sceneClass;
+          bg.setAttribute('data-scene', sceneClass);
+          bg.style.opacity    = '1';
+        });
+      });
+    }
   }
 
   setText('sceneName',    loc.name);
@@ -46,16 +57,13 @@ export function renderScene(state, locations, scenarios) {
   setText('sceneTagline', loc.tagline || '');
   setText('dayBadge',     `Day ${loc.day} · ${loc.name}`);
 
-  // Placeholder text — replaced by LLM narration event when it arrives
   setText('yakText',       'The mountain watches. The yak thinks.');
   setText('situationText', `You stand at ${loc.name}. The air is thin.`);
   setText('factText',      scen.fact || '');
 
-  // Yak mood
   const moodEl = document.getElementById('yakMood');
   if (moodEl) moodEl.textContent = getYakMood(state);
 
-  // Peer pressure event
   const peerSection = document.getElementById('peerSection');
   if (peerSection) {
     const hasPeer = !!scen.peerEvent;
@@ -68,54 +76,36 @@ export function renderScene(state, locations, scenarios) {
     }
   }
 
-  // Choices
   renderChoices(scen.choices || [], state.guideTrust);
-
-  // Vitals
   updateVitals(state);
-
-  // NOTE: journal entry is NOT added here.
-  // Journals are appended only when the 'narration' EventBus event fires
-  // (i.e. after a real game step). This prevents duplicate entries on
-  // boot and restart.
 }
 
 // ============================================================
-// UPDATE NARRATION TEXT FROM LLM EVENT & PLAY AUDIO
+// UPDATE NARRATION + AUDIO
 // ============================================================
 export function updateSceneNarration(data) {
   if (!data) return;
   if (data.yak)       setText('yakText',       data.yak);
   if (data.situation) setText('situationText', data.situation);
 
-  // 1. Cut off the old audio instantly if the player clicks rapidly
   if (activeYakAudio) {
     activeYakAudio.pause();
     activeYakAudio = null;
   }
 
-  // 2. Safely read the Base64 data URI (Checks both common payload mappings)
-  const audioSource = data.current_yak_audio || data.audio;
-
+  const audioSource = data.audio || data.current_yak_audio;
   if (audioSource) {
     try {
       activeYakAudio = new Audio(audioSource);
-      
-      // 3. Play the audio track
-      activeYakAudio.play().catch(error => {
-        console.warn("Browser audio execution deferred:", error);
-      });
+      activeYakAudio.play().catch(err => console.warn('[Audio]', err));
     } catch (e) {
-      console.error("Failed to initialize HTML5 Audio context:", e);
+      console.error('[Audio init]', e);
     }
   }
 }
 
 // ============================================================
 // TRIGGER ENDSCREEN
-// type: 'victory' | 'death' | 'evacuation'
-// Builds element IDs as: "end" + capitalised(type)
-//   → endVictory, endDeath, endEvacuation   (matches HTML)
 // ============================================================
 export function triggerEndscreen(type, narrationText) {
   const container = document.getElementById('gameContainer');
@@ -123,33 +113,21 @@ export function triggerEndscreen(type, narrationText) {
 
   const bg = document.getElementById('sceneBg');
   if (bg) {
+    const sceneClass = type === 'victory' ? 'scene-victory' : 'scene-gameover';
     bg.style.opacity = '0';
-    setTimeout(() => {
-      bg.className     = 'scene-bg ' +
-        (type === 'victory' ? 'scene-victory' : 'scene-gameover');
-      bg.style.opacity = '1';
-    }, 400);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        bg.className     = 'scene-bg ' + sceneClass;
+        bg.setAttribute('data-scene', sceneClass);
+        bg.style.opacity = '1';
+      });
+    });
   }
 
   const endings = {
-    victory: {
-      name:    'Thorong La — 5,416m',
-      alt:     '5,416 M',
-      tagline: 'The mountain gave its permission. Not everyone gets it.',
-      badge:   '🏔 You Survived',
-    },
-    death: {
-      name:    'The Mountain Decides',
-      alt:     'GAME OVER',
-      tagline: 'The mountain gave its verdict. Quietly. Without drama.',
-      badge:   '☠ You Did Not Survive',
-    },
-    evacuation: {
-      name:    'Helicopter Evacuation',
-      alt:     'EVACUATED',
-      tagline: 'Dorje made the call before you did. That is what guides are for.',
-      badge:   '🚁 Rescued',
-    },
+    victory:    { name: 'Thorong La — 5,416m',    alt: '5,416 M',  tagline: 'The mountain gave its permission. Not everyone gets it.', badge: '🏔 You Survived' },
+    death:      { name: 'The Mountain Decides',    alt: 'GAME OVER', tagline: 'The mountain gave its verdict. Quietly. Without drama.', badge: '☠ You Did Not Survive' },
+    evacuation: { name: 'Helicopter Evacuation',   alt: 'EVACUATED', tagline: 'Dorje made the call before you did. That is what guides are for.', badge: '🚁 Rescued' },
   };
 
   const e = endings[type] || endings.death;
@@ -158,17 +136,16 @@ export function triggerEndscreen(type, narrationText) {
   setText('sceneTagline', e.tagline);
   setText('dayBadge',     e.badge);
 
-  // "end" + first-letter-uppercased type → endVictory / endDeath / endEvacuation
   const screenId = 'end' + type.charAt(0).toUpperCase() + type.slice(1);
   document.getElementById(screenId)?.classList.add('active');
 
   const narrationId = 'endNarration' + type.charAt(0).toUpperCase() + type.slice(1);
-  const narrationEl = document.getElementById(narrationId);
-  if (narrationEl) narrationEl.textContent = narrationText || '...';
+  const narEl = document.getElementById(narrationId);
+  if (narEl) narEl.textContent = narrationText || '...';
 }
 
 // ============================================================
-// UPDATE END NARRATION (when LLM event arrives after endscreen shown)
+// UPDATE END NARRATION
 // ============================================================
 export function updateEndNarration(type, text) {
   const id = 'endNarration' + type.charAt(0).toUpperCase() + type.slice(1);
