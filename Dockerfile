@@ -30,8 +30,8 @@ RUN /home/user/.local/bin/uv sync --frozen --no-install-project --python 3.12
 
 # 8. Download TTS model for narration and run only once when Hugging Face builds the container, never during gameplay!
 RUN mkdir -p /app/models && \
-    wget /app/models/kokoro-v1.0.onnx https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx && \
-    wget /app/models/voices-v1.0.bin https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
+    wget -O /app/models/kokoro-v1.0.onnx https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx && \
+    wget -O /app/models/voices-v1.0.bin https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
 
 # 9. We tell the python backend where our model lives
 ENV KOKORO_MODEL_PATH="/app/models/kokoro-v1.0.onnx" \
