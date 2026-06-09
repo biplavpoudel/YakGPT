@@ -1,40 +1,39 @@
-// ============================================================
-// SCENE RENDERER
-// ============================================================
-import { renderChoices }   from './choices.js';
-import { addJournalEntry } from './journal.js';
-import { updateVitals }    from './vitals.js';
+// frontend/render/scene.js
+
+import { renderChoices } from './choices.js';
+import { updateVitals }  from './vitals.js';
 
 // ============================================================
-// YAK MOOD — derived from state, no global dependency
+// YAK MOOD
 // ============================================================
 export function getYakMood(state) {
-  if (state.health          < 30) return "Genuinely concerned";
-  if (state.guideTrust      < 40) return "Deeply disappointed";
-  if (state.acclimatization < 30) return "Medically alarmed";
-  if (state.energy          < 20) return "Pitying";
-  if (state.locationIndex  === 4) return "Unexpectedly moved";
-  if (state.locationIndex   >= 3) return "Cautiously invested";
-  return "Mildly contemptuous";
+  if (state.health          < 30) return 'Genuinely concerned';
+  if (state.guideTrust      < 40) return 'Deeply disappointed';
+  if (state.acclimatization < 30) return 'Medically alarmed';
+  if (state.energy          < 20) return 'Pitying';
+  if (state.locationIndex  === 4) return 'Unexpectedly moved';
+  if (state.locationIndex   >= 3) return 'Cautiously invested';
+  return 'Mildly contemptuous';
 }
 
 // ============================================================
 // RENDER SCENE
-// Takes state + data explicitly — no globals
+// Called on boot and restart with (state, LOCATIONS, SCENARIOS).
+// Does NOT touch journals or knowledge — those come from EventBus.
 // ============================================================
 export function renderScene(state, locations, scenarios) {
   if (!state || !locations || !scenarios) return;
 
-  const loc  = locations[state.locationIndex];
-  const scen = scenarios[state.locationIndex];
+  const loc  = locations[state.locationIndex]  ?? locations[0];
+  const scen = scenarios[state.locationIndex]  ?? scenarios[0];
   if (!loc || !scen) return;
 
-  // Scene header crossfade
+  // Scene background crossfade
   const bg = document.getElementById('sceneBg');
   if (bg) {
     bg.style.opacity = '0';
     setTimeout(() => {
-      bg.className     = 'scene-bg ' + (loc.scene || '');
+      bg.className     = 'scene-bg ' + (loc.scene || 'scene-manang');
       bg.style.opacity = '1';
     }, 400);
   }
@@ -44,44 +43,42 @@ export function renderScene(state, locations, scenarios) {
   setText('sceneTagline', loc.tagline || '');
   setText('dayBadge',     `Day ${loc.day} · ${loc.name}`);
 
-  // Fallback narration text — replaced by LLM event when it arrives
-  // If scen has yak/situation fields (legacy JS data), use them
-  // If scen is pure data.py format (no yak/situation), show placeholder
-  setText('yakText',       scen.yak      || 'The mountain watches. The yak thinks.');
-  setText('situationText', scen.situation || 'You stand at ' + loc.name + '. The air is thin.');
-  setText('factText',      scen.fact     || '');
+  // Placeholder text — replaced by LLM narration event when it arrives
+  setText('yakText',       'The mountain watches. The yak thinks.');
+  setText('situationText', `You stand at ${loc.name}. The air is thin.`);
+  setText('factText',      scen.fact || '');
 
+  // Yak mood
   const moodEl = document.getElementById('yakMood');
   if (moodEl) moodEl.textContent = getYakMood(state);
 
   // Peer pressure event
   const peerSection = document.getElementById('peerSection');
   if (peerSection) {
-    if (scen.peerEvent) {
-      peerSection.classList.add('active');
-      // peerEvent can be string or { display, llm_context }
+    const hasPeer = !!scen.peerEvent;
+    peerSection.classList.toggle('active', hasPeer);
+    if (hasPeer) {
       const displayText = typeof scen.peerEvent === 'object'
         ? scen.peerEvent.display
         : scen.peerEvent;
       setText('peerText', displayText);
-    } else {
-      peerSection.classList.remove('active');
     }
   }
 
-  // Choices — pass guideTrust so safe label hides correctly
+  // Choices
   renderChoices(scen.choices || [], state.guideTrust);
 
   // Vitals
   updateVitals(state);
 
-  // Journal fallback entry
-  addJournalEntry(state.locationIndex);
+  // NOTE: journal entry is NOT added here.
+  // Journals are appended only when the 'narration' EventBus event fires
+  // (i.e. after a real game step). This prevents duplicate entries on
+  // boot and restart.
 }
 
 // ============================================================
-// UPDATE SCENE TEXT FROM LLM EVENT
-// Called when narration event arrives from SSE stream
+// UPDATE NARRATION TEXT FROM LLM EVENT
 // ============================================================
 export function updateSceneNarration(data) {
   if (!data) return;
@@ -91,13 +88,14 @@ export function updateSceneNarration(data) {
 
 // ============================================================
 // TRIGGER ENDSCREEN
+// type: 'victory' | 'death' | 'evacuation'
+// Builds element IDs as: "end" + capitalised(type)
+//   → endVictory, endDeath, endEvacuation   (matches HTML)
 // ============================================================
 export function triggerEndscreen(type, narrationText) {
-  // CSS class drives layout — hides panels, expands scene
   const container = document.getElementById('gameContainer');
   if (container) container.className = `game-container end-${type}`;
 
-  // Scene photo crossfade
   const bg = document.getElementById('sceneBg');
   if (bg) {
     bg.style.opacity = '0';
@@ -108,7 +106,6 @@ export function triggerEndscreen(type, narrationText) {
     }, 400);
   }
 
-  // Scene info per ending
   const endings = {
     victory: {
       name:    'Thorong La — 5,416m',
@@ -136,24 +133,20 @@ export function triggerEndscreen(type, narrationText) {
   setText('sceneTagline', e.tagline);
   setText('dayBadge',     e.badge);
 
-  // Show the endscreen
+  // "end" + first-letter-uppercased type → endVictory / endDeath / endEvacuation
   const screenId = 'end' + type.charAt(0).toUpperCase() + type.slice(1);
   document.getElementById(screenId)?.classList.add('active');
 
-  // Narration text — set immediately if provided, else show ellipsis
-  const narrationId = `endNarration${type.charAt(0).toUpperCase() + type.slice(1)}`;
+  const narrationId = 'endNarration' + type.charAt(0).toUpperCase() + type.slice(1);
   const narrationEl = document.getElementById(narrationId);
-  if (narrationEl) {
-    narrationEl.textContent = narrationText || '...';
-  }
+  if (narrationEl) narrationEl.textContent = narrationText || '...';
 }
 
 // ============================================================
-// UPDATE ENDSCREEN NARRATION
-// Called when LLM end narration event arrives
+// UPDATE END NARRATION (when LLM event arrives after endscreen shown)
 // ============================================================
 export function updateEndNarration(type, text) {
-  const id = `endNarration${type.charAt(0).toUpperCase() + type.slice(1)}`;
+  const id = 'endNarration' + type.charAt(0).toUpperCase() + type.slice(1);
   const el = document.getElementById(id);
   if (el && text) el.textContent = text;
 }

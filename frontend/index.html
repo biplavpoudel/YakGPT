@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,33 +8,25 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/frontend/index.css">
 </head>
-
 <body>
-
 <div class="game-container" id="gameContainer">
-
   <!-- SCENE HEADER -->
   <div class="scene-header">
     <div class="scene-bg scene-manang" id="sceneBg"></div>
     <div class="scene-overlay"></div>
-
     <div class="scene-weather-badge" id="weatherBadge">
       <div class="weather-dot" id="weatherDot"></div>
       <span id="weatherLabel">Clear skies</span>
     </div>
-
     <div class="scene-day-badge" id="dayBadge">Day 1 · Manang</div>
-
     <div class="scene-info">
       <div class="scene-altitude" id="sceneAlt">3,540 m</div>
       <div class="scene-name" id="sceneName">Manang</div>
       <div class="scene-tagline" id="sceneTagline">Where the mountains begin their negotiations...</div>
     </div>
   </div>
-
   <!-- LEFT PANEL -->
   <div class="left-panel">
-
     <!-- VITALS -->
     <div class="card">
       <div class="card-header">
@@ -43,7 +34,6 @@
         <span style="font-size:9px; color:var(--snow-faint); font-family:var(--font-mono);">v1.0</span>
       </div>
       <div class="vitals-grid">
-
         <div class="vital-row">
           <div class="vital-top">
             <span class="vital-label">Health</span>
@@ -54,7 +44,6 @@
           </div>
           <div class="vital-warning" id="warnHealth">⚠ Critical: Descend immediately!</div>
         </div>
-
         <div class="vital-row">
           <div class="vital-top">
             <span class="vital-label">Acclimatization</span>
@@ -65,7 +54,6 @@
           </div>
           <div class="vital-warning" id="warnAcclim">⚠ AMS risk high! Your blood is not impressed.</div>
         </div>
-
         <div class="vital-row">
           <div class="vital-top">
             <span class="vital-label">Energy</span>
@@ -76,7 +64,6 @@
           </div>
           <div class="vital-warning" id="warnEnergy">⚠ Exhausted. Every step is a negotiation.</div>
         </div>
-
         <div class="vital-row">
           <div class="vital-top">
             <span class="vital-label">Guide Trust</span>
@@ -87,15 +74,12 @@
           </div>
           <div class="vital-warning" id="warnTrust">⚠ Dorje has stopped volunteering information.</div>
         </div>
-
       </div>
     </div>
-
     <!-- TRAIL PROGRESS -->
     <div class="trail-card">
       <div class="trail-title">Route: Manang to Thorong La</div>
       <div class="trail-nodes" id="trailNodes">
-
         <div class="trail-node">
           <div class="trail-node-left">
             <div class="trail-dot current" id="dot0">★</div>
@@ -113,7 +97,6 @@
             </div>
           </div>
         </div>
-
         <div class="trail-node">
           <div class="trail-node-left">
             <div class="trail-dot locked" id="dot1">○</div>
@@ -131,7 +114,6 @@
             </div>
           </div>
         </div>
-
         <div class="trail-node">
           <div class="trail-node-left">
             <div class="trail-dot locked" id="dot2">○</div>
@@ -149,7 +131,6 @@
             </div>
           </div>
         </div>
-
         <div class="trail-node">
           <div class="trail-node-left">
             <div class="trail-dot locked" id="dot3">○</div>
@@ -167,7 +148,6 @@
             </div>
           </div>
         </div>
-
         <div class="trail-node">
           <div class="trail-node-left">
             <div class="trail-dot locked peak" id="dot4"><span>▲</span></div>
@@ -184,10 +164,8 @@
             </div>
           </div>
         </div>
-
       </div>
     </div>
-
     <!-- INVENTORY -->
     <div class="card">
       <div class="card-header">
@@ -221,7 +199,6 @@
         </div>
       </div>
     </div>
-
     <!-- WEATHER -->
     <div class="card">
       <div class="card-header">
@@ -263,25 +240,22 @@
         </div>
       </div>
     </div>
-
   </div>
-
   <!-- RIGHT PANEL -->
   <div class="right-panel" id="rightPanel">
-
-    <!-- TABS -->
+    <!-- TABS
+         data-tab added to each button so switchTab() can match by attribute.
+         Panel IDs changed from panel-* to tab-* to match switchTab()'s getElementById('tab-' + name).
+    -->
     <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('trail')">Trail Log</button>
-      <button class="tab-btn" onclick="switchTab('guide')">Dorje's Journal</button>
-      <button class="tab-btn" onclick="switchTab('knowledge')">Knowledge Log</button>
+      <button class="tab-btn active" data-tab="trail"     onclick="switchTab('trail')">Trail Log</button>
+      <button class="tab-btn"        data-tab="guide"     onclick="switchTab('guide')">Dorje's Journal</button>
+      <button class="tab-btn"        data-tab="knowledge" onclick="switchTab('knowledge')">Knowledge Log</button>
     </div>
-
     <!-- NARRATIVE CARD -->
     <div class="narrative-panel">
-
-      <!-- TRAIL LOG -->
-      <div class="panel-body active" id="panel-trail">
-
+      <!-- TRAIL LOG — id="tab-trail" -->
+      <div class="panel-body active" id="tab-trail">
         <div class="yak-section">
           <div class="yak-avatar">
             🦬
@@ -297,13 +271,11 @@
             </div>
           </div>
         </div>
-
         <div class="situation-section">
           <div class="situation-text" id="situationText">
-            You are at Manang (3,540m), two days from Thorong La. The air is noticeably thinner here,  about 65% of sea-level oxygen. Dorje points to the Gangapurna glacier and says, quietly, that the mountain does not care about your schedule.
+            You are at Manang (3,540m), two days from Thorong La. The air is noticeably thinner here, about 65% of sea-level oxygen. Dorje points to the Gangapurna glacier and says, quietly, that the mountain does not care about your schedule.
           </div>
         </div>
-
         <div class="fact-section">
           <div class="fact-card">
             <div class="fact-label">📖 Altitude Fact</div>
@@ -312,7 +284,6 @@
             </div>
           </div>
         </div>
-
         <div class="peer-section" id="peerSection">
           <div class="peer-event">
             <div class="peer-icon">🇩🇪</div>
@@ -324,12 +295,10 @@
             </div>
           </div>
         </div>
-
         <div class="choices-section">
           <div class="choices-label">Your Decision</div>
           <div id="choicesArea"></div>
         </div>
-
         <div class="step-row">
           <button class="step-btn" id="stepBtn" onclick="takeStep()" disabled>
             Confirm &amp; Continue →
@@ -338,11 +307,9 @@
             Use Item
           </button>
         </div>
-
       </div>
-
-      <!-- GUIDE JOURNAL -->
-      <div class="panel-body" id="panel-guide">
+      <!-- GUIDE JOURNAL — id="tab-guide" -->
+      <div class="panel-body" id="tab-guide">
         <div class="journal-panel">
           <div class="journal-header">
             <span class="journal-title">Dorje Sherpa's Private Journal</span>
@@ -365,9 +332,8 @@
           </div>
         </div>
       </div>
-
-      <!-- KNOWLEDGE LOG -->
-      <div class="panel-body" id="panel-knowledge">
+      <!-- KNOWLEDGE LOG — id="tab-knowledge" -->
+      <div class="panel-body" id="tab-knowledge">
         <div class="knowledge-panel" id="knowledgePanel">
           <div style="font-family:var(--font-display); font-size:9px; letter-spacing:2px; color:var(--snow-dim); text-transform:uppercase; margin-bottom:4px;">Real Trekking Knowledge Collected</div>
           <div class="knowledge-item new">
@@ -387,12 +353,12 @@
           </div>
         </div>
       </div>
-
     </div>
-
   </div>
-
-  <!-- END SCREENS -->
+  <!-- END SCREENS
+       id="endEvacuation" and id="endNarrationEvacuation" fixed to match
+       triggerEndscreen('evacuation') which builds "end" + "Evacuation".
+  -->
   <div class="endscreen" id="endDeath">
     <div class="endscreen-icon">☠️</div>
     <div class="endscreen-title death">You Did Not Survive</div>
@@ -405,11 +371,10 @@
     </div>
     <button class="restart-btn" onclick="restartGame()">Try Again</button>
   </div>
-
-  <div class="endscreen" id="endEvac">
+  <div class="endscreen" id="endEvacuation">
     <div class="endscreen-icon">🚁</div>
     <div class="endscreen-title evac">Helicopter Evacuation</div>
-    <div class="endscreen-narration" id="endNarrationEvac">
+    <div class="endscreen-narration" id="endNarrationEvacuation">
       "Dorje made the call before you did. That is what guides are for. The view from the helicopter was extraordinary, not how you planned to see it, but extraordinary nonetheless."
     </div>
     <div class="autopsy-card" id="evacCard">
@@ -418,7 +383,6 @@
     </div>
     <button class="restart-btn" onclick="restartGame()">Try Again</button>
   </div>
-
   <div class="endscreen" id="endVictory">
     <div class="endscreen-icon">🏔️</div>
     <div class="endscreen-title victory">Thorong La: 5,416m</div>
@@ -431,9 +395,7 @@
     </div>
     <button class="restart-btn" onclick="restartGame()">Cross Again</button>
   </div>
-
 </div>
-
 <!-- INVENTORY MODAL -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeInventoryModal(event)">
   <div class="modal">
@@ -471,8 +433,6 @@
     <button class="modal-cancel" onclick="document.getElementById('modalOverlay').classList.remove('active')">Cancel</button>
   </div>
 </div>
-
 <script type="module" src="/frontend/index.js"></script>
-
 </body>
 </html>
