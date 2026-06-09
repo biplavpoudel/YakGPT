@@ -24,9 +24,7 @@ def ndjson_line(event: Dict[str, Any]) -> str:
     return json.dumps(event) + "\n"
 
 
-async def run_game_stream(
-    client_state: Dict[str, Any],
-) -> AsyncGenerator[str, None]:
+async def run_game_stream(client_state: Dict[str, Any]) -> AsyncGenerator[str, None]:
     # Cast plain dict to GameState — LangGraph accepts dicts that
     # match the TypedDict shape; cast avoids the pyright error.
     typed_state: GameState = client_state  # type: ignore[assignment]
@@ -64,6 +62,7 @@ async def run_game_stream(
             "yak":      result.get("current_yak_narration"),
             "situation": result.get("current_situation_text"),
             "journal":  result.get("current_journal_entry"),
+            "audio":    result.get("current_yak_audio") or "",
         },
     })
     await asyncio.sleep(0.02)

@@ -3,6 +3,9 @@
 import { renderChoices } from './choices.js';
 import { updateVitals }  from './vitals.js';
 
+// Track the active audio instance at the module level to prevent overlapping tracks
+let activeYakAudio = null;
+
 // ============================================================
 // YAK MOOD
 // ============================================================
@@ -11,8 +14,8 @@ export function getYakMood(state) {
   if (state.guideTrust      < 40) return 'Deeply disappointed';
   if (state.acclimatization < 30) return 'Medically alarmed';
   if (state.energy          < 20) return 'Pitying';
-  if (state.locationIndex  === 4) return 'Unexpectedly moved';
-  if (state.locationIndex   >= 3) return 'Cautiously invested';
+  if (state.locationIndex   === 4) return 'Unexpectedly moved';
+  if (state.locationIndex    >= 3) return 'Cautiously invested';
   return 'Mildly contemptuous';
 }
 
@@ -78,12 +81,34 @@ export function renderScene(state, locations, scenarios) {
 }
 
 // ============================================================
-// UPDATE NARRATION TEXT FROM LLM EVENT
+// UPDATE NARRATION TEXT FROM LLM EVENT & PLAY AUDIO
 // ============================================================
 export function updateSceneNarration(data) {
   if (!data) return;
   if (data.yak)       setText('yakText',       data.yak);
   if (data.situation) setText('situationText', data.situation);
+
+  // 1. Cut off the old audio instantly if the player clicks rapidly
+  if (activeYakAudio) {
+    activeYakAudio.pause();
+    activeYakAudio = null;
+  }
+
+  // 2. Safely read the Base64 data URI (Checks both common payload mappings)
+  const audioSource = data.current_yak_audio || data.audio;
+
+  if (audioSource) {
+    try {
+      activeYakAudio = new Audio(audioSource);
+      
+      // 3. Play the audio track
+      activeYakAudio.play().catch(error => {
+        console.warn("Browser audio execution deferred:", error);
+      });
+    } catch (e) {
+      console.error("Failed to initialize HTML5 Audio context:", e);
+    }
+  }
 }
 
 // ============================================================

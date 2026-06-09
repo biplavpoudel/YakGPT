@@ -1,13 +1,13 @@
 // frontend/index.js
 
-import { EventBus }                      from './core/event.js';
-import { renderChoices,
-         getSelectedChoiceIndex,
-         resetSelectedChoice }           from './render/choices.js';
-import { renderScene, triggerEndscreen } from './render/scene.js';
-import { updateVitals }                  from './render/vitals.js';
-import { addJournalEntry, clearJournal } from './render/journal.js';
-import { LOCATIONS, SCENARIOS }          from './data.js';
+import { EventBus }                                        from './core/event.js';
+import { renderChoices, getSelectedChoiceIndex,
+         resetSelectedChoice }                             from './render/choices.js';
+import { renderScene, triggerEndscreen,
+         updateSceneNarration }                            from './render/scene.js';
+import { updateVitals }                                    from './render/vitals.js';
+import { addJournalEntry, clearJournal }                   from './render/journal.js';
+import { LOCATIONS, SCENARIOS }                            from './data.js';
 
 // ============================================================
 // GAME STATE
@@ -38,19 +38,6 @@ function setSituationLoading(on) {
 }
 
 // ============================================================
-// TEXT SETTERS
-// ============================================================
-function setYakText(text) {
-  const el = document.getElementById('yakText');
-  if (el) el.textContent = text;
-}
-
-function setSituationText(text) {
-  const el = document.getElementById('situationText');
-  if (el) el.textContent = text;
-}
-
-// ============================================================
 // GAME STEP
 // ============================================================
 async function takeStep() {
@@ -66,7 +53,7 @@ async function takeStep() {
 
   try {
     const res = await fetch('/play', {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ state: { ...gameState, latest_choice_index: idx } }),
     });
@@ -140,9 +127,9 @@ function updateWeatherFromState(state) {
 
   const dot   = document.getElementById('weatherDot');
   const label = document.getElementById('weatherLabel');
-  if (s > 65)      { dot?.setAttribute('class','weather-dot storm'); if(label) label.textContent='Storm building'; }
-  else if (s > 35) { dot?.setAttribute('class','weather-dot warn');  if(label) label.textContent='Clouds gathering'; }
-  else             { dot?.setAttribute('class','weather-dot clear'); if(label) label.textContent='Clear skies'; }
+  if (s > 65)      { dot?.setAttribute('class','weather-dot storm'); if (label) label.textContent = 'Storm building'; }
+  else if (s > 35) { dot?.setAttribute('class','weather-dot warn');  if (label) label.textContent = 'Clouds gathering'; }
+  else             { dot?.setAttribute('class','weather-dot clear'); if (label) label.textContent = 'Clear skies'; }
 }
 
 // ============================================================
@@ -151,7 +138,7 @@ function updateWeatherFromState(state) {
 function updateInventoryDOM() {
   const inv = gameState.inventory ?? {};
   ['water','diamox','layers','food'].forEach(item => {
-    const qty = inv[item] ?? 0;
+    const qty   = inv[item] ?? 0;
     const qtyEl = document.getElementById('qty-' + item);
     const invEl = document.getElementById('inv-' + item);
     if (qtyEl) qtyEl.textContent = '×' + qty;
@@ -171,7 +158,7 @@ function addKnowledgeEntry(locIdx, fact) {
   const panel = document.getElementById('knowledgePanel');
   if (!panel || !fact) return;
   const div = document.createElement('div');
-  div.className = 'knowledge-item new';
+  div.className = 'knowledge-item new dynamic';
   div.innerHTML = `
     <div class="knowledge-category">${KNOWLEDGE_CATEGORIES[locIdx] ?? 'Altitude Knowledge'}</div>
     <div class="knowledge-text">${fact}</div>
@@ -182,8 +169,6 @@ function addKnowledgeEntry(locIdx, fact) {
 
 // ============================================================
 // TAB SWITCHING
-// HTML: buttons have data-tab="trail|guide|knowledge"
-//       panels have id="tab-trail|tab-guide|tab-knowledge"
 // ============================================================
 function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach(btn =>
@@ -195,9 +180,6 @@ function switchTab(name) {
 
 // ============================================================
 // INVENTORY MODAL
-// closeInventoryModal receives the click event from the overlay's
-// onclick; we only close if the overlay itself was clicked (not
-// a child element inside .modal).
 // ============================================================
 function openInventoryModal() {
   document.getElementById('modalOverlay')?.classList.add('active');
@@ -231,11 +213,7 @@ function useItem(item) {
 function restartGame() {
   gameState = structuredClone(INITIAL_STATE);
   clearJournal();
-
-  // Remove dynamically added knowledge entries; keep static ones
-  document.querySelectorAll('#knowledgePanel .knowledge-item.dynamic')
-    .forEach(el => el.remove());
-
+  document.querySelectorAll('#knowledgePanel .knowledge-item.dynamic').forEach(el => el.remove());
   document.querySelectorAll('.endscreen').forEach(el => el.classList.remove('active'));
   document.getElementById('gameContainer')?.setAttribute('class', 'game-container');
 
@@ -259,13 +237,19 @@ function initEventBindings() {
     updateWeatherFromState(gameState);
   });
 
+  // narration event owns ALL text + audio updates.
+  // Route through updateSceneNarration so scene.js manages
+  // the audio lifecycle (stop previous, play new).
   EventBus.on('narration', data => {
     if (!data) return;
-    if (data.yak)       setYakText(data.yak);
-    if (data.situation) setSituationText(data.situation);
-    if (data.journal)   addJournalEntry(data.journal);
 
-    // Add the fact for the location we just completed
+    // updateSceneNarration handles yak text, situation text, and audio playback
+    updateSceneNarration(data);
+
+    // Journal goes to the guide tab
+    if (data.journal) addJournalEntry(data.journal);
+
+    // Knowledge log: fact from the location we just left
     const prevIdx = Math.max(0, (gameState.locationIndex ?? 1) - 1);
     const fact    = SCENARIOS[prevIdx]?.fact;
     if (fact) addKnowledgeEntry(prevIdx, fact);

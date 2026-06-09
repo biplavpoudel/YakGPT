@@ -44,6 +44,7 @@ class GameState(TypedDict, total=False):
 
     # narration outputs (written by generate_llm_narrations)
     current_yak_narration:  str
+    current_yak_audio:      str  # <-- ADDED FOR PIPER TTS DATA URI
     current_situation_text: str
     current_journal_entry:  str
 
