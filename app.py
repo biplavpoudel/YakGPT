@@ -32,11 +32,11 @@ with gr.Blocks(title="YakGPT Engine Panel") as demo:
 # 6. Mount Gradio cleanly out of the way on a sub-route (e.g., /admin or /dashboard)
 app = gr.mount_gradio_app(app, demo, path="/admin")
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "app:app", 
-        host="0.0.0.0", 
-        port=7860, 
-        reload=True
-    )
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(
+#         "app:app", 
+#         host="0.0.0.0", 
+#         port=7860, 
+#         reload=True
+#     )

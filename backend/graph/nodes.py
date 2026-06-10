@@ -138,9 +138,13 @@ def select_llm_provider(state: GameState) -> GameState:
 # ============================================================
 def generate_llm_narrations(state: GameState) -> GameState:
     llm = get_llm_provider()
+    model_type = llm.__class__.__name__
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    narration_path = os.path.join(base_dir, "prompts", "narration.md")
 
     loc_idx = state.get("locationIndex") or 0
-    loc     = LOCATIONS[min(loc_idx, len(LOCATIONS) - 1)]
+    loc = LOCATIONS[min(loc_idx, len(LOCATIONS) - 1)]
     is_high_altitude = loc.get("altNum", 0) > 4400
 
     history = state.get("actionHistory") or []
@@ -164,23 +168,41 @@ def generate_llm_narrations(state: GameState) -> GameState:
             fallback_text=FALLBACKS["env_high"]
         )
         state["current_yak_narration"]  = ""
-        state["current_yak_audio"]      = ""  # Clear audio on end state
+        state["current_yak_audio"]      = ""
         state["current_journal_entry"]  = ""
         return state
 
     # --------------------------------------------------------
     # YAK NARRATION & VOICE SETUP
     # --------------------------------------------------------
-    yak_prompt = ChatPromptTemplate.from_template(
-        "You are a cynical Himalayan pack yak.\n"
-        "Location: {loc}. Trekker action: {action}.\n"
-        "Health: {health}/100. Guide trust: {trust}/100.\n"
-        "Respond in 2 sarcastic sentences. No emojis."
-    )
+
+    # System prompt is pre-baked into my Ollama Modelfile.
+    # Thus, to save context tokens, passing a lightweight user instruction message.
+    if "ollama" in model_type.lower():
+        yak_prompt_template = ChatPromptTemplate.from_template(
+            "You are a cynical Himalayan pack yak.\n"
+            "Location: {loc}. Trekker action: {action}.\n"
+            "Health: {health}/100. Guide trust: {trust}/100.\n"
+            "Respond in 2 sarcastic sentences. No emojis."
+        )
+    else:
+        with open(narration_path, "r", encoding="utf-8") as f:
+            yak_base_prompt = f.read()
+        contextualized_instructions = (
+            f"{yak_base_prompt}\n\n"
+            "CURRENT GAME STATE CONTEXT:\n"
+            "Location: {loc}. Trekker action: {action}.\n"
+            "Health: {health}/100. Guide trust: {trust}/100.\n"
+            "Respond in 2 sarcastic sentences. No emojis."
+        )
+        yak_prompt_template = ChatPromptTemplate.from_messages([
+            ("system", contextualized_instructions)
+        ])
+
     yak_fallback = FALLBACKS["yak_high_altitude"] if is_high_altitude else FALLBACKS["yak_general"]
     
     state["current_yak_narration"] = _invoke(
-        yak_prompt | llm, 
+        yak_prompt_template | llm, 
         {
             "loc":    loc["name"],
             "action": last_action,

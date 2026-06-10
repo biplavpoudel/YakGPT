@@ -26,7 +26,7 @@ def _validate_env(var: str, name: str):
 # FACTORY (CACHED)
 # ============================================================
 @lru_cache(maxsize=4)
-def get_llm_provider() -> BaseChatModel:
+def get_llm_provider(provider="gemini") -> BaseChatModel:
     """
     Cached LLM factory for performance + LangGraph stability.
     """
@@ -92,7 +92,7 @@ def get_llm_provider() -> BaseChatModel:
         return ChatAnthropic(model_name=model, timeout=timeout, stop=stop, api_key=SecretStr(api_key), )
 
     # --------------------------------------------------------
-    # GEMINI (Official Google GenAI)
+    # GEMINI (Official Google GenAI)        
     # --------------------------------------------------------
     elif provider == "gemini":
         api_key = os.getenv("GEMINI_API_KEY")
@@ -100,7 +100,9 @@ def get_llm_provider() -> BaseChatModel:
 
         if not api_key:
             raise LLMConfigError("Missing required environment variable: GEMINI_API_KEY")
+        
 
+        # needs to format the response
         return ChatGoogleGenerativeAI(
             google_api_key=SecretStr(api_key),
             model=model,
