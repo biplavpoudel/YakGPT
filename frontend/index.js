@@ -204,6 +204,10 @@ function useItem(item) {
 
   updateVitals(gameState);
   updateInventoryDOM();
+
+  // We record consumables local adjustments immediately
+  sessionStorage.setItem('yak_game_state', JSON.stringify(gameState));
+
   document.getElementById('modalOverlay')?.classList.remove('active');
 }
 
@@ -211,8 +215,13 @@ function useItem(item) {
 // RESTART
 // ============================================================
 function restartGame() {
+
+  // We purge stale state for each game restart
+  sessionStorage.removeItem('yak_game_state');
+
   gameState = structuredClone(INITIAL_STATE);
   clearJournal();
+
   document.querySelectorAll('#knowledgePanel .knowledge-item.dynamic').forEach(el => el.remove());
   document.querySelectorAll('.endscreen').forEach(el => el.classList.remove('active'));
   document.getElementById('gameContainer')?.setAttribute('class', 'game-container');
@@ -277,6 +286,10 @@ function initEventBindings() {
   EventBus.on('state_patch', patch => {
     if (!patch) return;
     gameState = { ...gameState, ...patch };
+    
+    // We commit every engine transaction patch point to storage
+    sessionStorage.setItem('yak_game_state', JSON.stringify(gameState));
+
     // renderScene updates the header (name, alt, day badge, background image,
     // fact text, peer event, choices) whenever location changes.
     // It sets placeholder yak/situation text which the subsequent
@@ -327,10 +340,34 @@ window.useItem             = useItem;
 window.switchTab           = switchTab;
 
 // ============================================================
-// BOOT
+// ON BOOT
 // ============================================================
+// document.addEventListener('DOMContentLoaded', () => {
+//   initEventBindings();
+//   renderScene(gameState, LOCATIONS, SCENARIOS);
+//   updateVitals(gameState);
+//   updateTrailFromState(gameState);
+//   updateWeatherFromState(gameState);
+//   updateInventoryDOM();
+// });
+
 document.addEventListener('DOMContentLoaded', () => {
   initEventBindings();
+
+  // We strip fresh default fallback, we pull cache entries first
+  const savedState = sessionStorage.getItem('yak_game_state');
+  if (savedState) {
+    try {
+      gameState = JSON.parse(savedState);
+      console.log("🏔️ Session data restored from cache framework:", gameState);
+    } catch (e) {
+      console.error("Session serialization breakdown, falling back to clean initialization.", e);
+      gameState = structuredClone(INITIAL_STATE);
+    }
+  } else {
+    gameState = structuredClone(INITIAL_STATE);
+  }
+
   renderScene(gameState, LOCATIONS, SCENARIOS);
   updateVitals(gameState);
   updateTrailFromState(gameState);
