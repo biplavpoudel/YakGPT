@@ -49,9 +49,32 @@ Every trekking season, hundreds of tourists endanger their lives and the lives o
 ## 🧬 Technical Stack & Constraints
   
 ### Model:
-Lightweight open-weights model () (≤ 8B parameters; not finalized!!) optimized for text-generation and running entirely within the resource budget.  
+Lightweight open-weights model, Llama-3.1-128k-Dark-Planet-Uncensored-8B-GGUF, optimized for text-generation and running entirely within the resource budget.  
 
 ### UI Framework:
 Crafted with Gradio gr.Blocks for a custom, grid-based layout that breaks away from traditional conversational AI patterns.
 
 ---
+
+
+### For using models locally in llama.cpp:
+Follow this guide to download and install Nvidia dependencies like **CUDA Toolkit**: https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#cuda
+
+We build **llama.cpp** from scratch to enable CUDA Acceleration. 
+
+We can configure CMake to generate build instructions in **Ninja** instead of Makefiles (makes build a hella lot faster!). And then we build with parallelism (12 cores in my case!):
+```
+cmake -B build -G Ninja -DGGML_CUDA=ON
+cmake --build build -j12
+```
+Then for actual testing, I am using **Llama-3.1-128k-Dark-Planet-Uncensored-8B-GGUF** (renamed here) from Huggingface: https://huggingface.co/DavidAU/Llama-3.1-128k-Dark-Planet-Uncensored-8B-GGUF, which is a **Llama 3.1** model with an **8B parameters** architecture, a maximum context window of **128k tokens**, and is quantized to **4-bits** using the **Q4_K_M** method.
+```
+./build/bin/llama-cli -m  ~/dark-planet-8b.gguf -ngl 32 -p "Hello, explain cuda offloading"
+```
+
+### For audio-based model
+The narration is done using **Kokoro-82M** model, which is executed locally via the **ONNX Runtime** (`kokoro-onnx`).
+
+Installation instruction can be found here: https://github.com/nazdridoy/kokoro-tts/
+
+Currently, the voice being used is `bm_george`, a British Male voice profile. The model runs completely on CPU using **CPU Execution Provider** (`CPUExecutionProvider`).
