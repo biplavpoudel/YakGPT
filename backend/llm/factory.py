@@ -3,10 +3,15 @@
 import os
 from functools import lru_cache
 from langchain_core.language_models.chat_models import BaseChatModel
+
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic 
-from langchain_google_genai import ChatGoogleGenerativeAI 
+from langchain_google_genai import ChatGoogleGenerativeAI
+# from llama_cpp import Llama
+from langchain_community.chat_models import ChatLlamaCpp
+from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
+
 from pydantic import SecretStr
 
 
@@ -25,18 +30,48 @@ def _validate_env(var: str, name: str):
 # ============================================================
 # FACTORY (CACHED)
 # ============================================================
-@lru_cache(maxsize=4)
-def get_llm_provider(provider="gemini") -> BaseChatModel:
+@lru_cache(maxsize=2)
+def get_llm_provider() -> BaseChatModel:
     """
     Cached LLM factory for performance + LangGraph stability.
     """
 
-    provider = os.getenv("LLM_PROVIDER", "ollama").lower()
+    provider = os.getenv("LLM_PROVIDER", "huggingface").lower()
+
+    # --------------------------------------------------------
+    # LLAMA.CPP
+    # --------------------------------------------------------
+    if provider == "llama.cpp":
+        model_path = os.getenv("LLAMA_MODEL_PATH", "/home/biplav/models/llama/dark-planet-8b.gguf")
+        ngl = int(os.getenv("LLAMA_N_GPU_LAYERS", "-1"))
+        n_ctx = int(os.getenv("LLAMA_CONTEXT_WINDOW", "4096"))
+        n_threads = int(os.getenv("LLAMA_THREADS_CONTROL", 10))
+        temp = float(os.getenv("LLAMA_TEMPERATURE", "0.7"))
+        top_p = float(os.getenv("LLAMA_TOP_P", "0.9"))
+        top_k = int(os.getenv("LLAMA_TOP_K", "40"))
+        streaming = os.getenv("LLAMA_STREAMING", "true").lower() == "true"
+        max_tokens = int(os.getenv("LLAMA_MAX_TOKENS", "512"))
+        repeat_penalty = float(os.getenv("LLAMA_REPEAT_PENALTY", "1.1"))
+        f16_kv = True
+
+        return ChatLlamaCpp(
+            model_path = model_path,
+            n_gpu_layers = ngl,
+            n_ctx = n_ctx,
+            n_threads = n_threads,
+            temperature = temp,
+            top_p = top_p,
+            top_k = top_k,
+            streaming=streaming,
+            max_tokens=max_tokens,
+            repeat_penalty=repeat_penalty,
+            f16_kv= f16_kv,
+        )
 
     # --------------------------------------------------------
     # OLLAMA
     # --------------------------------------------------------
-    if provider == "ollama":
+    elif provider == "ollama":
         base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         model = os.getenv("OLLAMA_MODEL", "yak-gm:latest")
 
@@ -44,6 +79,27 @@ def get_llm_provider(provider="gemini") -> BaseChatModel:
             base_url=base_url,
             model=model,
         )
+    
+    # --------------------------------------------------------
+    # HUGGING FACE SERVERLESS API
+    # --------------------------------------------------------
+    elif provider == "huggingface":
+        api_key = os.getenv("HF_TOKEN")
+        model = os.getenv("HF_MODEL_NAME", "Qwen/Qwen2.5-7B-Instruct")
+        
+        if not api_key:
+            raise LLMConfigError("Missing required environment variable: HF_TOKEN")
+
+        llm = HuggingFaceEndpoint(
+            repo_id=model,
+            task="text-generation",
+            huggingfacehub_api_token=api_key,
+            max_new_tokens=512,
+            temperature=0.7,
+            model=model
+        )
+        
+        return ChatHuggingFace(llm=llm)
 
     # --------------------------------------------------------
     # MODAL (OpenAI-compatible endpoint)

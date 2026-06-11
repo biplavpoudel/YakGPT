@@ -3,9 +3,11 @@
 from __future__ import annotations
 import asyncio
 import json
+from collections import defaultdict
+from time import time
 from typing import Any, AsyncGenerator, Dict
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -14,16 +16,44 @@ from backend.graph.state import GameState
 
 router = APIRouter()
 
+# ============================================================
+# RATE LIMITER
+# 20 steps per IP per hour — enough to finish the game 4x over.
+# Keeps one bad actor from draining your API credits.
+# In-memory only; resets on container restart (fine for HF Spaces).
+# ============================================================
+_request_log: defaultdict = defaultdict(list)
+MAX_STEPS_PER_HOUR = int(20)
+ 
+def check_rate_limit(ip: str) -> None:
+    now = time()
+    # We drop entries older than 1 hour
+    _request_log[ip] = [t for t in _request_log[ip] if now - t < 3600]
+    if len(_request_log[ip]) >= MAX_STEPS_PER_HOUR:
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit reached (20 steps/hour). Come back later. I can't afford it!",
+        )
+    _request_log[ip].append(now)
+ 
 
+# ============================================================
+# REQUEST MODEL
+# ============================================================
 class GameRequest(BaseModel):
     state: Dict[str, Any]
 
-
+# ============================================================
+# NDJSON HELPER
+# ============================================================
 def ndjson_line(event: Dict[str, Any]) -> str:
     """One JSON object per line — matches frontend NDJSON parser."""
     return json.dumps(event) + "\n"
 
-
+ 
+# ============================================================
+# GAME STREAM
+# ============================================================  
 async def run_game_stream(client_state: Dict[str, Any]) -> AsyncGenerator[str, None]:
     # Cast plain dict to GameState — LangGraph accepts dicts that
     # match the TypedDict shape; cast avoids the pyright error.
@@ -85,8 +115,10 @@ async def run_game_stream(client_state: Dict[str, Any]) -> AsyncGenerator[str, N
     yield ndjson_line({"type": "done", "payload": True})
 
 
+# FastAPI handles the req parameter automatically by dependency injection. So we don't declare it anywhere else.
 @router.post("/play")
-async def play_game(request: GameRequest) -> StreamingResponse:
+async def play_game(request: GameRequest, req: Request) -> StreamingResponse:
+    check_rate_limit(req.client.host if req.client else "unknown")
     return StreamingResponse(
         run_game_stream(request.state),
         media_type="text/plain",

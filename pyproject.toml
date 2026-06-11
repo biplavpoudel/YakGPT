@@ -11,8 +11,10 @@
         "langchain-anthropic>=1.4.4",
         "langchain-community>=0.4.2",
         "langchain-google-genai>=4.2.4",
+        "langchain-huggingface>=1.2.2",
         "langchain-ollama>=1.1.0",
         "langchain-openai>=1.2.2",
         "langgraph>=1.2.4",
+        "llama-cpp-python>=0.3.28",
         "uvicorn>=0.49.0",
 ]
