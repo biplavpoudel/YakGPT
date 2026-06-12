@@ -56,11 +56,16 @@ def _invoke(chain: Any, inputs: Dict[str, Any], fallback_text: str) -> str:
     try:
         # LangChain allows configuring timeouts directly on the runnable execution
         result = chain.with_config(config={"timeout": 4.0}).invoke(inputs)
+        #print(f"[INVOKE] raw result type: {type(result)}")
+        #print(f"[INVOKE] raw result: {result}")
         if isinstance(result, AIMessage):
             return _str(result.content)
         return _str(result)
     except Exception as e:
         print(f"[FALLBACK TRIGGERED] LLM Error or Timeout: {e}")
+        #import traceback
+        #print(f"[FALLBACK TRIGGERED] {type(e).__name__}: {e}")
+        #traceback.print_exc()
         return fallback_text
 
 # Global singleton so it initializes ONCE on server boot

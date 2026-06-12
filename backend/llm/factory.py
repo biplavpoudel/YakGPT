@@ -13,6 +13,7 @@ from langchain_community.chat_models import ChatLlamaCpp
 from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
 
 from pydantic import SecretStr
+from dotenv import load_dotenv
 
 
 class LLMConfigError(Exception):
@@ -30,13 +31,16 @@ def _validate_env(var: str, name: str):
 # ============================================================
 # FACTORY (CACHED)
 # ============================================================
-@lru_cache(maxsize=2)
+# @lru_cache(maxsize=2)
 def get_llm_provider() -> BaseChatModel:
     """
     Cached LLM factory for performance + LangGraph stability.
     """
+    # Force a fresh disk read right before checking the provider variable
+    load_dotenv(override=True)
 
     provider = os.getenv("LLM_PROVIDER", "huggingface").lower()
+    print(f"--- ACTIVE LLM PROVIDER: {repr(provider)} ---")
 
     # --------------------------------------------------------
     # LLAMA.CPP
@@ -46,6 +50,7 @@ def get_llm_provider() -> BaseChatModel:
         ngl = int(os.getenv("LLAMA_N_GPU_LAYERS", "-1"))
         n_ctx = int(os.getenv("LLAMA_CONTEXT_WINDOW", "4096"))
         n_threads = int(os.getenv("LLAMA_THREADS_CONTROL", 10))
+        n_batch = int(os.getenv("LLAMA_BATCH_SIZE", 512))
         temp = float(os.getenv("LLAMA_TEMPERATURE", "0.7"))
         top_p = float(os.getenv("LLAMA_TOP_P", "0.9"))
         top_k = int(os.getenv("LLAMA_TOP_K", "40"))
@@ -55,17 +60,18 @@ def get_llm_provider() -> BaseChatModel:
         f16_kv = True
 
         return ChatLlamaCpp(
-            model_path = model_path,
-            n_gpu_layers = ngl,
-            n_ctx = n_ctx,
-            n_threads = n_threads,
-            temperature = temp,
-            top_p = top_p,
-            top_k = top_k,
-            streaming=streaming,
+            model_path=model_path,
+            n_gpu_layers=ngl,
+            n_ctx=n_ctx,
+            temperature=temp,
             max_tokens=max_tokens,
-            repeat_penalty=repeat_penalty,
-            f16_kv= f16_kv,
+            verbose=False,
+
+            # streaming=False,
+            
+            # LLAMA 3 STRUCTURAL TEMPLATE FIX
+            # 'antiprompt' tells the C++ engine to strictly halt when these tokens are generated
+            # stop=["<|eot_id|>"],
         )
 
     # --------------------------------------------------------
@@ -169,3 +175,24 @@ def get_llm_provider() -> BaseChatModel:
     # UNKNOWN PROVIDER
     # --------------------------------------------------------
     raise ValueError(f"Unsupported LLM provider: {provider}")
+
+
+if __name__ == "__main__":
+    from langchain_community.chat_models import ChatLlamaCpp
+    from langchain_core.prompts import ChatPromptTemplate
+
+    llm = ChatLlamaCpp(
+        model_path="/home/biplav/models/llama/dark-planet-8b.gguf",
+        n_gpu_layers=-1,
+        verbose=True,
+    )
+
+    prompt = ChatPromptTemplate.from_template(
+        "You are a cynical Himalayan pack yak.\n"
+        "Location: {loc}. Trekker action: {action}.\n"
+        "Respond in 2 sarcastic sentences."
+    )
+
+    chain = prompt | llm
+    res = chain.invoke({"loc": "Manang", "action": "took a rest day"})
+    print("CONTENT:", res.content)

@@ -62,6 +62,13 @@ Follow this guide to download and install Nvidia dependencies like **CUDA Toolki
 
 We build **llama.cpp** from scratch to enable CUDA Acceleration. 
 
+Since the build doesnt support gcc-16, I had to first install version 15 of GCC and exported the variables as:
+```
+export CC=/usr/bin/gcc-15
+export CXX=/usr/bin/g++-15
+export CUDAHOSTCXX=/usr/bin/g++-15
+```
+
 We can configure CMake to generate build instructions in **Ninja** instead of Makefiles (makes build a hella lot faster!). And then we build with parallelism (12 cores in my case!):
 ```
 cmake -B build -G Ninja -DGGML_CUDA=ON
