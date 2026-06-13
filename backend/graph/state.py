@@ -1,5 +1,3 @@
-# backend/graph/state.py
-
 from __future__ import annotations
 from typing import Any, Dict, List, Optional, TypedDict
 
@@ -11,46 +9,52 @@ from typing import Any, Dict, List, Optional, TypedDict
 # level, which is what LangGraph expects — it merges partial
 # state updates from each node, so no key is "always present"
 # from the type-checker's point of view.
-#
-# Use .get("key", default) everywhere in node functions and
-# game_routes; never bare state["key"] on optional fields.
 # ============================================================
 class GameState(TypedDict, total=False):
-    # core stats
+    # Core stats
     health:          int
     energy:          int
     acclimatization: int
     guideTrust:      int
     stormPressure:   int
 
-    # progression
-    locationIndex: int
+    # Progression & Time Realism
+    locationIndex: int  # Current location in the LOCATIONS array
+    subTurnIndex:  int  # Track multi-stage choices inside ONE location (e.g., 0=Arrival, 1=Night, 2=Departure)
     day:           int
     endState:      Optional[str]
 
-    # per-turn input from frontend
+    # Narrative Continuity & Escalation
+    relationshipTier: str  # Dynamically updated state: "Protective", "Resigned", "Hostile"
+    tensionModifier:  str  # Escalation multiplier: "Low-Stakes", "Hostile", "Suffocating"
+    shortHistoryLog:  List[str] # Human-readable text log of the last 4 choices for the LLM's memory
+
+    # Per-turn input from frontend
     latest_choice_index: int
 
-    # history
+    # Inventory
+    # History (Raw payload data)
     actionHistory: List[Dict[str, Any]]
 
-    # flags
+    inventory: Dict[str, int]
+
+    # Flags
     acclimatizationDayTaken: bool
     layersUsed:              bool
     backstoryUnlocked:       bool
 
-    # llm routing (written by select_llm_provider)
+    # LLM routing
     llm_provider: str
 
-    # narration outputs (written by generate_llm_narrations)
+    # Narration outputs
     current_yak_narration:  str
-    current_yak_audio:      str  # <-- ADDED FOR PIPER TTS DATA URI
+    current_yak_audio:      str  
     current_situation_text: str
     current_journal_entry:  str
 
-    # choices for next turn (written by build_events)
+    # Choices for next turn
     current_choices: List[Dict[str, Any]]
 
-    # legacy
+    # Legacy
     events:   List[Dict[str, Any]]
     response: Dict[str, Any]

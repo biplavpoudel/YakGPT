@@ -25,13 +25,27 @@ export function resetSelectedChoice() {
 export function renderChoices(choices, guideTrust = 100) {
   const area = document.getElementById('choicesArea');
   if (!area) return;
-  area.innerHTML = '';
 
+  // FIX: Do not wipe the DOM if the choices payload is empty or invalid.
+  // This protects the buttons rendered by scene.js from being overwritten 
+  // by an empty backend stream payload.
   if (!choices || choices.length === 0) return;
 
+  // Now it is safe to clear and render
+  area.innerHTML = '';
+
   choices.forEach((c, i) => {
-    const trustHidden   = guideTrust < 50 && c.type === 'safe';
-    const effectiveType = trustHidden ? 'hidden' : c.type;
+    // --------------------------------------------------------
+    // ADAPTIVE METADATA EXTRACTION
+    // Index 0 is systematically treated as the deliberate/safe path.
+    // If trust collapses, the guide refuses to point it out.
+    // --------------------------------------------------------
+    const isSafeIndex   = (i === 0);
+    const trustHidden   = guideTrust < 50 && isSafeIndex;
+    
+    // Aesthetic fallbacks for styling (keeps your CSS rule bindings happy)
+    const displayType   = isSafeIndex ? 'safe' : 'risky';
+    const effectiveType = trustHidden ? 'hidden' : displayType;
 
     const btn = document.createElement('button');
     btn.className = `choice-btn ${effectiveType}`;
@@ -39,15 +53,21 @@ export function renderChoices(choices, guideTrust = 100) {
 
     const tag = document.createElement('span');
     tag.className   = `choice-tag tag-${effectiveType}`;
+    
+    // Dynamic text masking based on Dorje's active respect for you
     tag.textContent = trustHidden
       ? '???'
-      : c.type.charAt(0).toUpperCase() + c.type.slice(1);
+      : displayType.charAt(0).toUpperCase() + displayType.slice(1);
 
     const conseq = document.createElement('span');
     conseq.className   = 'choice-consequence';
+    
+    // Our new choices don't carry hardcoded 'consequence' strings because
+    // the LLM computes the narrative fallout dynamically. 
+    // We display a clean immersion prompt instead.
     conseq.textContent = trustHidden
-      ? '(Dorje has stopped labelling your options.)'
-      : c.consequence;
+      ? '(Dorje remains silent. He refuses to guide your judgment.)'
+      : (c.consequence || '⚠️ This decision will permanently alter your path metric weights.');
 
     btn.appendChild(tag);
     btn.appendChild(document.createTextNode(' ' + c.text));

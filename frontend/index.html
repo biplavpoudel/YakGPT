@@ -215,7 +215,7 @@
             <div class="storm-fill" id="stormFill" style="width:12%"></div>
           </div>
         </div>
-        <div class="weather-status" id="weatherStatus">"The sky is still on your side. For now."</div>
+        <div class="weather-status" id="weatherStatus">Low-Stakes / Discomfort</div>
         <div class="weather-forecast">
           <div class="forecast-day">
             <div class="forecast-label">Today</div>
@@ -313,7 +313,10 @@
         <div class="journal-panel">
           <div class="journal-header">
             <span class="journal-title">Dorje Sherpa's Private Journal</span>
-            <span class="trust-badge trust-high" id="trustBadge">Trust: High</span>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+              <span class="trust-badge trust-high" id="trustBadge">Trust: High</span>
+              <span id="relationshipTierDisplay" style="font-family: var(--font-mono); font-size: 9px; color: var(--gold-dim); text-transform: uppercase; letter-spacing: 0.5px;">Wary Observer</span>
+            </div>
           </div>
           <div class="journal-entries" id="journalEntries">
             <div class="journal-entry new-entry">

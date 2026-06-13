@@ -7,8 +7,14 @@ let activeYakAudio = null;
 
 // ============================================================
 // YAK MOOD
+// Upgraded to dynamically prioritize our backend relationship tiers!
 // ============================================================
 export function getYakMood(state) {
+  const tier = state.relationshipTier;
+  
+  if (tier && tier.includes("Protective Companion")) return 'Unexpectedly protective';
+  if (tier && tier.includes("Resigned Guardian"))    return 'Deeply hostile / Watching your steps';
+  
   if (state.health          < 30) return 'Genuinely concerned';
   if (state.guideTrust      < 40) return 'Deeply disappointed';
   if (state.acclimatization < 30) return 'Medically alarmed';
@@ -24,9 +30,24 @@ export function getYakMood(state) {
 export function renderScene(state, locations, scenarios) {
   if (!state || !locations || !scenarios) return;
 
-  const idx  = state.locationIndex ?? 0;
+  const idx    = state.locationIndex ?? 0;
+  const subIdx = state.subTurnIndex ?? 0; // <-- ADDED: Vital for multi-turn dictionary lookups
+  
   const loc  = locations[idx] ?? locations[0];
-  const scen = scenarios[idx] ?? scenarios[0];
+  
+  // --------------------------------------------------------
+  // FIXED: Nested Multi-Turn Dictionary Traversal
+  // Safely extracts the current sub-turn challenge block out of the camp dictionary array.
+  // --------------------------------------------------------
+  const campScenarios = scenarios[idx] ?? scenarios[0];
+  let scen = null;
+  
+  if (Array.isArray(campScenarios)) {
+    scen = campScenarios[subIdx] ?? campScenarios[0];
+  } else {
+    scen = campScenarios; // Safe fallback container check
+  }
+  
   if (!loc || !scen) return;
 
   // Capture the scene class NOW, before any async gap
@@ -36,12 +57,10 @@ export function renderScene(state, locations, scenarios) {
   // no setTimeout so the class is never set from a stale closure
   const bg = document.getElementById('sceneBg');
   if (bg) {
-    // Only swap if the scene actually changed — avoids flicker on same location
     const current = bg.getAttribute('data-scene');
     if (current !== sceneClass) {
       bg.style.transition = 'opacity 0.4s';
       bg.style.opacity    = '0';
-      // Use requestAnimationFrame to ensure opacity:0 is painted first
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           bg.className        = 'scene-bg ' + sceneClass;
@@ -57,12 +76,19 @@ export function renderScene(state, locations, scenarios) {
   setText('sceneTagline', loc.tagline || '');
   setText('dayBadge',     `Day ${loc.day} · ${loc.name}`);
 
-  setText('yakText',       'The mountain watches. The yak thinks.');
-  setText('situationText', `You stand at ${loc.name}. The air is thin.`);
+  // Dynamic placeholders while the network round-trip stream is resolving
+  setText('yakText',       'The mountain watches. Tashi is calculating your weight...');
+  setText('situationText', `You stand at ${loc.name}. The pressure dial shifts.`);
   setText('factText',      scen.fact || '');
 
   const moodEl = document.getElementById('yakMood');
   if (moodEl) moodEl.textContent = getYakMood(state);
+
+  // Apply dynamic color modifiers to the background body based on the tension tracker!
+  if (state.tensionModifier) {
+    const highTension = state.tensionModifier.includes("Suffocating") || state.tensionModifier.includes("Hostile");
+    document.body.classList.toggle('stakes-escalated', highTension);
+  }
 
   const peerSection = document.getElementById('peerSection');
   if (peerSection) {
@@ -76,17 +102,37 @@ export function renderScene(state, locations, scenarios) {
     }
   }
 
-  renderChoices(scen.choices || [], state.guideTrust);
+  // FIX: We only render static file choices if there isn't a live stream running 
+  // or if the static scenario explicitly provides them.
+  if (scen.choices && scen.choices.length > 0) {
+    renderChoices(scen.choices, state.guideTrust);
+  }
+
   updateVitals(state);
+
+  const tierDisplay = document.getElementById('relationshipTierDisplay');
+  if (tierDisplay && state.relationshipTier) {
+    tierDisplay.textContent = state.relationshipTier;
+  }
+
+  const tensionDisplay = document.getElementById('weatherStatus');
+  if (tensionDisplay && state.tensionModifier) {
+    tensionDisplay.textContent = state.tensionModifier;
+  }
 }
 
 // ============================================================
-// UPDATE NARRATION + AUDIO
+// UPDATE NARRATION + AUDIO (UPDATED TO HANDLE DYNAMIC CHOICES)
 // ============================================================
-export function updateSceneNarration(data) {
+export function updateSceneNarration(data, currentGuideTrust = 100) {
   if (!data) return;
-  if (data.yak)       setText('yakText',       data.yak);
+  if (data.yak)        setText('yakText',       data.yak);
   if (data.situation) setText('situationText', data.situation);
+  
+  // NEW: If the server streams dynamic choices back, render them immediately!
+  if (data.choices && data.choices.length > 0) {
+    renderChoices(data.choices, currentGuideTrust);
+  }
 
   if (activeYakAudio) {
     activeYakAudio.pause();

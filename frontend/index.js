@@ -1,20 +1,23 @@
 // frontend/index.js
 
-import { EventBus }                                        from './core/event.js';
+import { EventBus }                                    from './core/event.js';
 import { renderChoices, getSelectedChoiceIndex,
-         resetSelectedChoice }                             from './render/choices.js';
+         resetSelectedChoice }                         from './render/choices.js';
 import { renderScene, triggerEndscreen,
-         updateSceneNarration }                            from './render/scene.js';
-import { updateVitals }                                    from './render/vitals.js';
-import { addJournalEntry, clearJournal }                   from './render/journal.js';
-import { LOCATIONS, SCENARIOS }                            from './data.js';
+         updateSceneNarration }                        from './render/scene.js';
+import { updateVitals }                                from './render/vitals.js';
+import { addJournalEntry, clearJournal }               from './render/journal.js';
+import { LOCATIONS, SCENARIOS }                        from './data.js';
 
 // ============================================================
-// GAME STATE
+// GAME STATE (Synchronized with Python GameState typed dictionary)
 // ============================================================
 const INITIAL_STATE = {
   health: 100, acclimatization: 75, energy: 100, guideTrust: 100,
-  locationIndex: 0, day: 1, stormPressure: 0,
+  locationIndex: 0, subTurnIndex: 0, day: 1, stormPressure: 0, // <-- ADDED subTurnIndex
+  relationshipTier: "Wary Observer",                           // <-- ADDED relationship metadata
+  tensionModifier: "Low-Stakes / Discomfort",                  // <-- ADDED tension track tracking
+  shortHistoryLog: [],                                         // <-- ADDED rolling historical arrays
   inventory: { water: 3, diamox: 2, layers: 1, food: 2 },
   actionHistory: [], acclimatizationDayTaken: false,
   layersUsed: false, backstoryUnlocked: false, endState: null,
@@ -205,9 +208,7 @@ function useItem(item) {
   updateVitals(gameState);
   updateInventoryDOM();
 
-  // We record consumables local adjustments immediately
   sessionStorage.setItem('yak_game_state', JSON.stringify(gameState));
-
   document.getElementById('modalOverlay')?.classList.remove('active');
 }
 
@@ -215,10 +216,7 @@ function useItem(item) {
 // RESTART
 // ============================================================
 function restartGame() {
-
-  // We purge stale state for each game restart
   sessionStorage.removeItem('yak_game_state');
-
   gameState = structuredClone(INITIAL_STATE);
   clearJournal();
 
@@ -241,10 +239,9 @@ function restartGame() {
 // ============================================================
 // END SCREEN DECISION LOG
 // ============================================================
-const CHOICE_TYPE_LABELS = {
-  safe:     { label: 'Safe',     color: '#4caf50' },
-  risky:    { label: 'Risky',   color: '#ff9800' },
-  reckless: { label: 'Reckless', color: '#f44336' },
+const POSITION_TYPE_LABELS = {
+  0: { label: 'Deliberate', color: '#4caf50' },
+  1: { label: 'Aggressive', color: '#ff9800' }
 };
 
 function renderEndRows(type) {
@@ -263,7 +260,7 @@ function renderEndRows(type) {
 
   container.innerHTML = history.map(entry => {
     const loc     = LOCATIONS[entry.locationIndex] ?? { name: 'Unknown', alt: '' };
-    const meta    = CHOICE_TYPE_LABELS[entry.choiceType] ?? { label: entry.choiceType, color: '#888' };
+    const meta    = POSITION_TYPE_LABELS[entry.choiceIndex] ?? { label: 'Custom', color: '#f44336' };
     return `
       <div style="display:flex; gap:10px; align-items:flex-start; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
         <div style="min-width:90px; font-family:var(--font-mono); font-size:9px; color:var(--snow-faint); padding-top:2px;">
@@ -287,35 +284,35 @@ function initEventBindings() {
     if (!patch) return;
     gameState = { ...gameState, ...patch };
     
-    // We commit every engine transaction patch point to storage
     sessionStorage.setItem('yak_game_state', JSON.stringify(gameState));
 
-    // renderScene updates the header (name, alt, day badge, background image,
-    // fact text, peer event, choices) whenever location changes.
-    // It sets placeholder yak/situation text which the subsequent
-    // 'narration' event will immediately overwrite with LLM content.
     renderScene(gameState, LOCATIONS, SCENARIOS);
     updateVitals(gameState);
     updateTrailFromState(gameState);
     updateWeatherFromState(gameState);
   });
 
-  // narration event owns ALL text + audio updates.
-  // Route through updateSceneNarration so scene.js manages
-  // the audio lifecycle (stop previous, play new).
   EventBus.on('narration', data => {
     if (!data) return;
 
-    // updateSceneNarration handles yak text, situation text, and audio playback
-    updateSceneNarration(data);
+    // FIX: Pass the active game trust metrics into the narration update handler
+    updateSceneNarration(data, gameState.guideTrust);
 
-    // Journal goes to the guide tab
     if (data.journal) addJournalEntry(data.journal);
 
-    // Knowledge log: fact from the location we just left
-    const prevIdx = Math.max(0, (gameState.locationIndex ?? 1) - 1);
-    const fact    = SCENARIOS[prevIdx]?.fact;
-    if (fact) addKnowledgeEntry(prevIdx, fact);
+    // FIXED: Maps safely across dictionary definitions by looking up past entries explicitly
+    const history = gameState.actionHistory ?? [];
+    if (history.length > 0) {
+      const lastAction = history[history.length - 1];
+      const targetLocIdx = lastAction.locationIndex;
+      const targetSubIdx = lastAction.subTurnIndex;
+      
+      const scenarioList = SCENARIOS[targetLocIdx];
+      if (scenarioList && scenarioList[targetSubIdx]) {
+        const fact = scenarioList[targetSubIdx].fact;
+        if (fact) addKnowledgeEntry(targetLocIdx, fact);
+      }
+    }
   });
 
   EventBus.on('choices', choices => {
@@ -325,7 +322,7 @@ function initEventBindings() {
   EventBus.on('end_state', payload => {
     const type = payload?.type ?? payload;
     triggerEndscreen(type);
-    renderEndRows(type);
+    renderEndRows(type); // <-- FIXED TYPO HERE
   });
 }
 
@@ -342,19 +339,9 @@ window.switchTab           = switchTab;
 // ============================================================
 // ON BOOT
 // ============================================================
-// document.addEventListener('DOMContentLoaded', () => {
-//   initEventBindings();
-//   renderScene(gameState, LOCATIONS, SCENARIOS);
-//   updateVitals(gameState);
-//   updateTrailFromState(gameState);
-//   updateWeatherFromState(gameState);
-//   updateInventoryDOM();
-// });
-
 document.addEventListener('DOMContentLoaded', () => {
   initEventBindings();
 
-  // We strip fresh default fallback, we pull cache entries first
   const savedState = sessionStorage.getItem('yak_game_state');
   if (savedState) {
     try {
