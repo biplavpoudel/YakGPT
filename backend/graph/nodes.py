@@ -1,5 +1,3 @@
-# backend/graph/nodes.py
-
 from __future__ import annotations
 import subprocess
 import tempfile
@@ -55,9 +53,7 @@ def _str(val: Any) -> str:
 def _invoke(chain: Any, inputs: Dict[str, Any], fallback_text: str) -> str:
     """Invokes the LLM chain with a try-except wrapper as a safety net."""
     try:
-        # LangChain configurations execute natively with fixed timeouts
         result = chain.with_config(config={"timeout": 4.0}).invoke(inputs)
-        # StrOutputParser automatically reduces the result into a clean Python string
         return _str(result)
     except Exception as e:
         print(f"[FALLBACK TRIGGERED] LLM Error or Timeout: {e}")
@@ -94,12 +90,10 @@ def _generate_piper_tts_base64(text: str) -> str:
             lang="en-gb"
         )
         
-        # Write the audio matrix into an in-memory byte buffer
         buffer = io.BytesIO()
         sf.write(buffer, samples, sample_rate, format="WAV")
         buffer.seek(0)
         
-        # Base64 encode the binary data stream
         base64_audio = base64.b64encode(buffer.read()).decode("utf-8")
         return f"data:audio/wav;base64,{base64_audio}"
 
@@ -116,19 +110,29 @@ def apply_deterministic_rules(state: GameState) -> GameState:
 
 
 # ============================================================
-# NODE 2: MODEL SELECTION
+# NODE 2: STATE INITIALIZATION & SANITATION (REPLACED SELECTOR)
 # ============================================================
-def select_llm_provider(state: GameState) -> GameState:
-    storm = state.get("stormPressure") or 0
-    trust = state.get("guideTrust") or 100
+def prepare_turn_context(state: GameState) -> GameState:
+    """
+    If a player has a completely normal turn where nothing special happens,
+    our rules engine might not write anything for relationshipTier or tensionModifier.
+    If those slots are totally empty (None), our LLM prompt will panic and crash
+    because it doesn't know how to fill in the blank text template.
 
-    if storm > 80:
-        state["llm_provider"] = "fast"
-    elif trust < 30:
-        state["llm_provider"] = "cheap"
-    else:
-        state["llm_provider"] = "default"
+    This function checks those slots. If they are empty,
+    it fills them with standard baseline defaults like "Wary Observer" or "Low-Stakes".
+    It ensures that every single turn looks uniform and pristine right before the LLM reads it.
+    """
+    # Enforce standard single-instance tracker tag
+    state["llm_provider"] = "default"
+    
+    # Initialize baseline text fallbacks if rules engine updates are partial
+    if not state.get("relationshipTier"):
+        state["relationshipTier"] = "Wary Observer"
 
+    if not state.get("tensionModifier"):
+        state["tensionModifier"] = "Low-Stakes / Discomfort"
+        
     return state
 
 
@@ -137,7 +141,6 @@ def select_llm_provider(state: GameState) -> GameState:
 # ============================================================
 def generate_llm_narrations(state: GameState) -> GameState:
     llm = get_llm_provider()
-    model_type = llm.__class__.__name__
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
     narration_path = os.path.join(base_dir, "prompts", "narration.md")
@@ -146,11 +149,9 @@ def generate_llm_narrations(state: GameState) -> GameState:
     loc = LOCATIONS[min(loc_idx, len(LOCATIONS) - 1)]
     is_high_altitude = loc.get("altNum", 0) > 4400
 
-    # Extract dynamic metadata generated in game_rules.py
     relationship = state.get("relationshipTier", "Wary Observer")
     tension = state.get("tensionModifier", "Low-Stakes / Discomfort")
     
-    # Format the rolling memory window of past decisions into a clean string block
     history_list: List[str] = state.get("shortHistoryLog") or []
     if history_list:
         history_context = "\n".join([f"- {item}" for item in history_list])
@@ -158,7 +159,7 @@ def generate_llm_narrations(state: GameState) -> GameState:
         history_context = "- The journey has just commenced from the lower trailheads."
 
     # --------------------------------------------------------
-    # END STATE — closing monologue only
+    # END STATE — Closing monologue configuration
     # --------------------------------------------------------
     if state.get("endState"):
         prompt = ChatPromptTemplate.from_template(
@@ -167,7 +168,7 @@ def generate_llm_narrations(state: GameState) -> GameState:
             "Write 3 intense sentences from the mountain's perspective. "
             "Focus on absolute silence, freezing altitude, and the inevitability of your judgment."
         )
-        state["current_situation_text"] = _invoke(
+        closing_text = _invoke(
             prompt | llm | StrOutputParser(), 
             {
                 "outcome": state.get("endState", ""), 
@@ -177,9 +178,11 @@ def generate_llm_narrations(state: GameState) -> GameState:
             },
             fallback_text=FALLBACKS["env_high"]
         )
-        state["current_yak_narration"]  = ""
-        state["current_yak_audio"]      = ""
-        state["current_journal_entry"]  = ""
+        
+        state["current_yak_narration"]  = closing_text
+        state["current_situation_text"] = "The journey terminates here."
+        state["current_journal_entry"]  = "Log closed."
+        state["current_yak_audio"]      = _generate_piper_tts_base64(closing_text)
         return state
 
     # --------------------------------------------------------
@@ -189,16 +192,11 @@ def generate_llm_narrations(state: GameState) -> GameState:
         yak_base_prompt = f.read()
         
     yak_prompt_template = ChatPromptTemplate.from_messages([
-        # System Message: STRICTLY the Persona and Rules
         ("system", yak_base_prompt), 
-        
-        # Human Message: STRICTLY the Game State Data
         ("human", (
             "DYNAMIC RELATIONSHIP & STAKES CONTEXT:\n"
-            f"- Tashi's Relationship Tier to Trekker: {relationship}\n"
-            f"- Mountain Environmental Tension Level: {tension}\n\n"
-            "THE TREKKER'S RECENT DECISION MILESTONES:\n"
-            f"{history_context}\n\n"
+            "- Tashi's Relationship Tier to Trekker: {relationship}\n"
+            "- Mountain Environmental Tension Level: {tension}\n\n"
             "CURRENT TURN VARIABLES:\n"
             "Location: {loc} ({alt}). Day: {day}.\n"
             "Physical Health: {health}/100. Guide Trust: {trust}/100. Storm Wall Pressure: {storm}/100.\n\n"
@@ -211,17 +209,17 @@ def generate_llm_narrations(state: GameState) -> GameState:
     state["current_yak_narration"] = _invoke(
         yak_prompt_template | llm | StrOutputParser(), 
         {
-            "loc":    loc["name"],
-            "alt":    loc["alt"],
-            "day":    state.get("day") or 1,
-            "health": state.get("health") or 100,
-            "trust":  state.get("guideTrust") or 100,
-            "storm":  state.get("stormPressure") or 0,
+            "loc":         loc["name"],
+            "alt":         loc["alt"],
+            "day":         state.get("day") or 1,
+            "health":      state.get("health") or 100,
+            "trust":       state.get("guideTrust") or 100,
+            "storm":       state.get("stormPressure") or 0,
+            "history_log": history_context  # Matches our narration.md key
         },
         fallback_text=yak_fallback
     )
 
-    # Generate the voice representation for Tashi right after his text updates
     state["current_yak_audio"] = _generate_piper_tts_base64(state["current_yak_narration"])
 
     # --------------------------------------------------------
@@ -281,55 +279,64 @@ def generate_llm_narrations(state: GameState) -> GameState:
 # ============================================================
 # NODE 4: BUILD CHOICES INTO STATE
 # ============================================================
-# backend/graph/nodes.py
-
 def build_events(state: GameState) -> GameState:
     """
     Looks up the nested multi-scenario structure using locationIndex 
-    and subTurnIndex keys sequentially. Added robust dynamic fallbacks 
-    to guarantee choice buttons are never dropped.
+    and subTurnIndex keys sequentially. Fixes engine soft-locks by 
+    injecting functional flow flags into emergency choices.
     """
     loc_idx = state.get("locationIndex") or 0
     sub_idx = state.get("subTurnIndex") or 0
 
-    # 1. Attempt strict coordinates lookup out of the multi-tier dictionary shape
     if loc_idx in SCENARIOS:
         sub_scenarios = SCENARIOS[loc_idx]
         if sub_scenarios and sub_idx < len(sub_scenarios):
             state["current_choices"] = sub_scenarios[sub_idx]["choices"]
             return state
-        
-        # 2. COORDINATE FALLBACK: If sub_idx is out of bounds but the location exists, 
-        # recycle the baseline scenario choice array so the engine doesn't lock up!
         elif sub_scenarios and len(sub_scenarios) > 0:
             state["current_choices"] = sub_scenarios[0]["choices"]
             return state
 
-    # 3. GLOBAL PROCEDURAL SAFETY FALLBACK: If everything fails, build structured
-    # interactive choice blocks on-the-fly to keep the UI active.
     print(f"[CHOICES WARNING] Lookup failed for loc_idx: {loc_idx}, sub_idx: {sub_idx}. Injecting emergency choices.")
     
     if loc_idx == 1: # Yak Kharka
         state["current_choices"] = [
             {
                 "text": "Rest a bit longer at Yak Kharka to let your lungs adjust.", 
-                "consequence": "Improves acclimatization slightly, but delays trail progress."
+                "consequence": "Improves acclimatization slightly, but delays trail progress.",
+                "rest": True
             },
             {
                 "text": "Pack your gear and push on up the trail toward Thorong Phedi.", 
-                "consequence": "Outruns the climbing storm pressure but increases AMS risk."
+                "consequence": "Outruns the climbing storm pressure but increases AMS risk.",
+                "travel": True
             }
         ]
     else: # General baseline fallback array
         state["current_choices"] = [
             {
                 "text": "Conserve your energy reserves and proceed with caution.", 
-                "consequence": "Minimizes vitality drain metrics."
+                "consequence": "Minimizes vitality drain metrics.",
+                "rest": True
             },
             {
                 "text": "Increase your hiking pace to reach the next camp early.", 
-                "consequence": "Reduces regional exposure duration at a high physical cost."
+                "consequence": "Reduces regional exposure duration at a high physical cost.",
+                "travel": True
             }
         ]
 
     return state
+
+# ============================================================
+# NODE 4: THE ROUTER FUNCTION
+# ============================================================
+# End State Conditional Routing Edge
+def route_after_turn(state: GameState) -> str:
+    """
+    Checks if an endscreen state has been reached. 
+    If yes, we bypass future choices and terminate the graph loop immediately.
+    """
+    if state.get("endState"):
+        return "__end__"
+    return "events"
