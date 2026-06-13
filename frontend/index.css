@@ -25,6 +25,7 @@
   --trust-col:   #2ecc71;
   --font-display: 'Cinzel', serif;
   --font-body:    'Crimson Pro', Georgia, serif;
+  --font-journal:  "Cedarville Cursive", "Edu NSW ACT Cursive", cursive;
   --font-mono:    'JetBrains Mono', monospace;
   --font-typewriter: "Special Elite", var(--font-mono);
   --font-mood:     "Libre Bodoni", serif;
@@ -1050,8 +1051,9 @@ body.weather-storm .scene-overlay { background: linear-gradient(to bottom, rgba(
   border-left: 3px solid var(--bg5);
   border-radius: 0 8px 8px 0;
   padding: 12px 16px;
-  font-size: 15px;
-  font-style: italic;
+  font-family: var(--font-journal);
+  font-size: 18px;
+  /* font-style: italic; */
   color: var(--snow-dim);
   line-height: 1.7;
   transition: transform 0.15s ease, background 0.2s, color 0.5s, border-color 0.2s;
@@ -1067,7 +1069,7 @@ body.weather-storm .scene-overlay { background: linear-gradient(to bottom, rgba(
 
 .journal-entry-day {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: 14px;
   letter-spacing: 1.5px;
   color: var(--gold-dim);
   text-transform: uppercase;
