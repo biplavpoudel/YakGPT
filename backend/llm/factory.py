@@ -61,7 +61,7 @@ def get_llm_provider() -> BaseChatModel:
 
         return ChatOpenAI(
             # Core Client Params
-            model="lgpt-3.5-turbo",         # Just a placeholder, using any name works here
+            model="gpt-3.5-turbo",         # Just a placeholder, using any name works here
             base_url="http://localhost:8080/v1",
             temperature=temp,                   
             # Custom Server Params
