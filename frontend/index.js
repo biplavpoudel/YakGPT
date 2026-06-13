@@ -197,12 +197,13 @@ function closeInventoryModal(event) {
 function useItem(item) {
   const inv = gameState.inventory ?? {};
   if (!inv[item] || inv[item] <= 0) return;
+
   inv[item]--;
   gameState.inventory = inv;
 
-  if (item === 'water')  gameState.energy          = Math.min(100, (gameState.energy          ?? 0) + 10);
-  if (item === 'diamox') gameState.acclimatization  = Math.min(100, (gameState.acclimatization  ?? 0) + 15);
-  if (item === 'food')   gameState.energy           = Math.min(100, (gameState.energy           ?? 0) + 20);
+  if (item === 'water')  gameState.energy = Math.min(100, (gameState.energy ?? 0) + 10);
+  if (item === 'diamox') gameState.acclimatization  = Math.min(100, (gameState.acclimatization ?? 0) + 15);
+  if (item === 'food')   gameState.energy = Math.min(100, (gameState.energy ?? 0) + 20);
   if (item === 'layers') gameState.layersUsed = true;
 
   updateVitals(gameState);
@@ -210,6 +211,9 @@ function useItem(item) {
 
   sessionStorage.setItem('yak_game_state', JSON.stringify(gameState));
   document.getElementById('modalOverlay')?.classList.remove('active');
+
+  // Trigger layout synchronization to ensure any open screen views update smoothly
+  renderScene(gameState, LOCATIONS, SCENARIOS);
 }
 
 // ============================================================
@@ -290,6 +294,7 @@ function initEventBindings() {
     updateVitals(gameState);
     updateTrailFromState(gameState);
     updateWeatherFromState(gameState);
+    updateInventoryDOM(); // Guarantees item count numbers refresh dynamically after turn processing resolves!
   });
 
   EventBus.on('narration', data => {
