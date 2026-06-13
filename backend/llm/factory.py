@@ -9,7 +9,8 @@ from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic 
 from langchain_google_genai import ChatGoogleGenerativeAI
 # from llama_cpp import Llama
-from langchain_community.chat_models import ChatLlamaCpp
+# from langchain_community.chat_models import LlamaCpp
+from langchain_community.llms import LlamaCpp
 from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
 
 from pydantic import SecretStr
@@ -31,7 +32,7 @@ def _validate_env(var: str, name: str):
 # ============================================================
 # FACTORY (CACHED)
 # ============================================================
-# @lru_cache(maxsize=2)
+@lru_cache(maxsize=2)
 def get_llm_provider() -> BaseChatModel:
     """
     Cached LLM factory for performance + LangGraph stability.
@@ -47,31 +48,30 @@ def get_llm_provider() -> BaseChatModel:
     # --------------------------------------------------------
     if provider == "llama.cpp":
         model_path = os.getenv("LLAMA_MODEL_PATH", "/home/biplav/models/llama/dark-planet-8b.gguf")
-        ngl = int(os.getenv("LLAMA_N_GPU_LAYERS", "-1"))
-        n_ctx = int(os.getenv("LLAMA_CONTEXT_WINDOW", "4096"))
-        n_threads = int(os.getenv("LLAMA_THREADS_CONTROL", 10))
-        n_batch = int(os.getenv("LLAMA_BATCH_SIZE", 512))
         temp = float(os.getenv("LLAMA_TEMPERATURE", "0.7"))
         top_p = float(os.getenv("LLAMA_TOP_P", "0.9"))
-        top_k = int(os.getenv("LLAMA_TOP_K", "40"))
-        streaming = os.getenv("LLAMA_STREAMING", "true").lower() == "true"
         max_tokens = int(os.getenv("LLAMA_MAX_TOKENS", "512"))
         repeat_penalty = float(os.getenv("LLAMA_REPEAT_PENALTY", "1.1"))
-        f16_kv = True
+        stop = ["<|im_end|>", "<|im_start|>"]
 
-        return ChatLlamaCpp(
-            model_path=model_path,
-            n_gpu_layers=ngl,
-            n_ctx=n_ctx,
-            temperature=temp,
-            max_tokens=max_tokens,
-            verbose=False,
+        if not os.getenv("OPENAI_API_KEY"):
+            os.environ["OPENAI_API_KEY"] = "sk-no-key-required"
 
-            # streaming=False,
-            
-            # LLAMA 3 STRUCTURAL TEMPLATE FIX
-            # 'antiprompt' tells the C++ engine to strictly halt when these tokens are generated
-            # stop=["<|eot_id|>"],
+        # ./llama-server --model ~/models/llama/dark-planet-8b.gguf --ctx-size 4096   --n-gpu-layers -1   --port 8080   --chat-template chatml
+
+        return ChatOpenAI(
+            # Core Client Params
+            model="lgpt-3.5-turbo",         # Just a placeholder, using any name works here
+            base_url="http://localhost:8080/v1",
+            temperature=temp,                   
+            # Custom Server Params
+            # Utilizing model_kwargs ensures these exact keys land un-altered in the root payload body
+            model_kwargs={
+                "max_tokens": max_tokens,   # Enforces the stop ceiling on llama-server natively
+                "top_p": top_p,                   # Applies nucleus sampling
+                "frequency_penalty": repeat_penalty, # Suppresses loop generation and narrative repetition
+                "stop": stop,
+            }
         )
 
     # --------------------------------------------------------
