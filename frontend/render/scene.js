@@ -4,6 +4,7 @@ import { renderChoices } from './choices.js';
 import { updateVitals }  from './vitals.js';
 
 let activeYakAudio = null;
+const activeTypewriterTimers = new Map(); // to track running animation intervals
 
 // ============================================================
 // YAK MOOD
@@ -126,10 +127,15 @@ export function renderScene(state, locations, scenarios) {
 // ============================================================
 export function updateSceneNarration(data, currentGuideTrust = 100) {
   if (!data) return;
-  if (data.yak)        setText('yakText',       data.yak);
-  if (data.situation) setText('situationText', data.situation);
-  
-  // NEW: If the server streams dynamic choices back, render them immediately!
+
+  if (data.yak) {
+    streamTextTypewriter('yakText', data.yak, 14); 
+  }
+  if (data.situation) {
+    streamTextTypewriter('situationText', data.situation, 8);
+  }
+
+  // If the server streams dynamic choices back, render them immediately!
   if (data.choices && data.choices.length > 0) {
     renderChoices(data.choices, currentGuideTrust);
   }
@@ -200,9 +206,60 @@ export function updateEndNarration(type, text) {
 }
 
 // ============================================================
-// HELPER
+// TRUE STREAMING TYPEWRITER ENGINE
+// ============================================================
+const textQueues = new Map();     // Holds raw pending string characters
+const activeLoops = new Map();    // Tracks interval clocks for each element container
+
+export function streamTextTypewriter(id, targetText, speed = 12) {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  // 1. Initialize character queues if this is the first token package of the turn
+  if (!textQueues.has(id)) {
+    textQueues.set(id, []);
+    el.textContent = ''; // Flash-wipe placeholder container text on day turn start
+  }
+
+  // 2. Diff incoming state text to find new characters, then push them to the array queue
+  const currentTotalText = targetText || '';
+  const renderedLength = el.textContent.length + textQueues.get(id).length;
+  
+  if (currentTotalText.length > renderedLength) {
+    const newSlice = currentTotalText.slice(renderedLength);
+    textQueues.get(id).push(...newSlice.split(''));
+  }
+
+  // 3. Fire up the processing pump cycle if it isn't active
+  if (!activeLoops.has(id)) {
+    const intervalId = setInterval(() => {
+      const queue = textQueues.get(id);
+      
+      if (queue && queue.length > 0) {
+        // Shift a single character off our stack array map and append to layout
+        el.textContent += queue.shift();
+      } else {
+        // Idle condition reached: temporary pause out until next stream frame lands
+        clearInterval(intervalId);
+        activeLoops.delete(id);
+      }
+    }, speed);
+    
+    activeLoops.set(id, intervalId);
+  }
+}
+
+// ============================================================
+// HARD OVERRIDE RESET (For clearing templates safely)
 // ============================================================
 function setText(id, value) {
   const el = document.getElementById(id);
-  if (el) el.textContent = value;
+  if (el) {
+    // Force kill active interval loops and clear storage blocks
+    if (activeLoops.has(id)) clearInterval(activeLoops.get(id));
+    activeLoops.delete(id);
+    textQueues.delete(id);
+    
+    el.textContent = value;
+  }
 }

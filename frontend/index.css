@@ -26,6 +26,7 @@
   --font-display: 'Cinzel', serif;
   --font-body:    'Crimson Pro', Georgia, serif;
   --font-mono:    'JetBrains Mono', monospace;
+  --font-typewriter: var(--font-mono);
 }
 
 body.weather-warn {
@@ -736,12 +737,20 @@ body.weather-storm .scene-overlay { background: linear-gradient(to bottom, rgba(
   transition: color 0.5s;
 }
 
-.yak-text {
+/* .yak-text {
   font-size: 17px;
   font-style: italic;
   color: var(--snow);
   line-height: 1.75;
   transition: color 0.5s;
+} */
+
+.yak-text {
+  font-family: var(--font-typewriter);
+  font-size: 13.5px; /* Monospace fonts display wider; dropping down slightly balances line tracking */
+  line-height: 1.6;
+  letter-spacing: -0.1px;
+  color: var(--snow);
 }
 
 @keyframes dot-bounce {
@@ -753,13 +762,17 @@ body.weather-storm .scene-overlay { background: linear-gradient(to bottom, rgba(
    SITUATION TEXT
    ============================================================ */
 .situation-section {
+  font-family: var(--font-typewriter);
+  font-size: 13px;
   padding: 14px 18px;
   border-bottom: 0.5px solid var(--border);
   transition: border-color 0.5s;
 }
 
 .situation-text {
-  font-size: 16px;
+  font-family: var(--font-typewriter);
+  font-size: 13px;
+  /* font-size: 16px; */
   color: var(--snow-dim);
   line-height: 1.85;
   border-left: 3px solid var(--bg5);
@@ -1484,4 +1497,22 @@ body.weather-storm .scene-overlay { background: linear-gradient(to bottom, rgba(
 
 .game-container.end-evacuation .scene-bg {
   filter: brightness(0.55) saturate(0.3) hue-rotate(180deg);
+}
+
+/* Typewriter Cursor State Blinker */
+.yak-text::after, .situation-text::after {
+  content: "▊";
+  color: var(--gold-dim);
+  margin-left: 2px;
+  animation: cursor-blink 0.8s infinite alternate;
+}
+
+/* Hide cursor when animation tracking maps clear out text actions */
+.yak-text:empty::after, .situation-text:empty::after {
+  display: none;
+}
+
+@keyframes cursor-blink {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
