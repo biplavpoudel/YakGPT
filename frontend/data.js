@@ -9,16 +9,6 @@ export const LOCATIONS = [
   { name: "Thorong La Pass", alt: "5,416 m", altNum: 5416, day: 6, scene: "scene-thorong-la" }
 ];
 
-// frontend/data.js
-
-export const LOCATIONS = [
-  { name: "Manang",          alt: "3,540 m", altNum: 3540, day: 1, scene: "scene-manang" },
-  { name: "Yak Kharka",      alt: "4,050 m", altNum: 4050, day: 3, scene: "scene-yak-kharkha" },
-  { name: "Thorong Phedi",   alt: "4,450 m", altNum: 4450, day: 4, scene: "scene-thorong-phedi" },
-  { name: "High Camp",       alt: "4,850 m", altNum: 4850, day: 5, scene: "scene-high-camp" },
-  { name: "Thorong La Pass", alt: "5,416 m", altNum: 5416, day: 6, scene: "scene-thorong-la" }
-];
-
 export const SCENARIOS = [
   // INDEX 0: MANANG SCENARIOS (Array of sub-turns)
   [
