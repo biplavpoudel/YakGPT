@@ -164,7 +164,7 @@ def generate_llm_narrations(state: GameState) -> GameState:
     if state.get("endState"):
         prompt = ChatPromptTemplate.from_template(
             "A Himalayan expedition ended with outcome: {outcome}. Location: {loc}. Day: {day}.\n"
-            "RECORDED JOURNEY HISTORY:\n{history}\n\n"
+            "RECORDED JOURNEY HISTORY:\n{history_log}\n\n"
             "Write 3 intense sentences from the mountain's perspective. "
             "Focus on absolute silence, freezing altitude, and the inevitability of your judgment."
         )
@@ -174,7 +174,7 @@ def generate_llm_narrations(state: GameState) -> GameState:
                 "outcome": state.get("endState", ""), 
                 "loc": loc["name"], 
                 "day": state.get("day") or 1,
-                "history": history_context
+                "history_log": history_context
             },
             fallback_text=FALLBACKS["env_high"]
         )
@@ -197,6 +197,7 @@ def generate_llm_narrations(state: GameState) -> GameState:
             "DYNAMIC RELATIONSHIP & STAKES CONTEXT:\n"
             "- Tashi's Relationship Tier to Trekker: {relationship}\n"
             "- Mountain Environmental Tension Level: {tension}\n\n"
+            "RECORDED JOURNEY CONTEXT:\n{history_log}\n\n"
             "CURRENT TURN VARIABLES:\n"
             "Location: {loc} ({alt}). Day: {day}.\n"
             "Physical Health: {health}/100. Guide Trust: {trust}/100. Storm Wall Pressure: {storm}/100.\n\n"
@@ -231,7 +232,7 @@ def generate_llm_narrations(state: GameState) -> GameState:
     env_prompt = ChatPromptTemplate.from_template(
         "You are the oppressive atmosphere of the high Himalayas.\n"
         "STAKES MODIFIER: {tension}\n"
-        "RECORDED JOURNEY CONTEXT:\n{history}\n\n"
+        "RECORDED JOURNEY CONTEXT:\n{history_log}\n\n"
         "Describe the immediate physical environmental conditions in exactly 2 sentences.\n"
         "Location: {loc} ({alt}). Storm Wall: {storm}/100.\n"
         "Focus on wind velocity, oxygen scarcity, physical strain, and how past choices are catching up to their body right now."
@@ -245,7 +246,7 @@ def generate_llm_narrations(state: GameState) -> GameState:
             "alt":     loc["alt"],
             "storm":   state.get("stormPressure") or 0,
             "tension": tension,
-            "history": history_context
+            "history_log": history_context
         },
         fallback_text=env_fallback
     )
@@ -256,7 +257,7 @@ def generate_llm_narrations(state: GameState) -> GameState:
     journal_prompt = ChatPromptTemplate.from_template(
         "You are Dorje, an experienced Himalayan guide writing a private log entry.\n"
         "YOUR CURRENT RELATIONSHIP STATE: {relationship}\n"
-        "THE TREKKER'S ACTION RECORD:\n{history}\n\n"
+        "THE TREKKER'S ACTION RECORD:\n{history_log}\n\n"
         "Write a raw, 2-sentence private journal entry evaluating the trekker.\n"
         "Location: {loc}. Day: {day}. Health: {health}/100. Acclimatization: {acclim}/100.\n"
         "Reflect directly on their past choices, your current level of trust in them, and whether they will survive the pass or become a fatal liability."
@@ -270,7 +271,7 @@ def generate_llm_narrations(state: GameState) -> GameState:
             "day": state.get("day") or 1,
             "health": state.get("health") or 100,
             "acclim":state.get("acclimatization") or 75,
-            "history": history_context,
+            "history_log": history_context,
             "relationship": relationship,
         },
         fallback_text=journal_fallback

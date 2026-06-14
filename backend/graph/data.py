@@ -333,7 +333,8 @@ SCENARIOS: Dict[int, List[Dict[str, Any]]]= {
                     "deltaAcclim": 100,
                     "deltaEnergy": 100,
                     "deltaTrust": 100,
-                    "deltaStorm": 0
+                    "deltaStorm": 0,
+                    "travel": True
                 }
             ]
         }

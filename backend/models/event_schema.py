@@ -1,5 +1,6 @@
-from typing import TypedDict, List, Dict, Any, Union
+# backend/models/event_schema.py
 
+from typing import TypedDict, List, Dict, Any, Union
 
 # ============================================================
 # EVENT TYPES (SAFE CONSTANTS)

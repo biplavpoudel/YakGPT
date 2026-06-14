@@ -92,7 +92,7 @@ def apply_game_rules(state: GameState) -> GameState:
     # --------------------------------------------------------
     item_to_consume = choice.get("consumeItem")
     inventory: Dict[str, int] = dict(
-        state.get("inventory") or {"water": 3, "diamox": 2, "food": 2, "layers": 1}
+        state.get("inventory") or {"water": 3, "diamox": 2, "rations": 2, "layers": 1}
     )
     
     item_bonus_acclim = 0
@@ -156,8 +156,13 @@ def apply_game_rules(state: GameState) -> GameState:
         next_loc = loc_idx + 1
         state["locationIndex"] = next_loc
         state["subTurnIndex"]  = 0
+
+        # Enforcing that time moves forward by 1 day, or snaps to the destination's minimum day requirement
         if next_loc < len(LOCATIONS):
-            state["day"] = int(LOCATIONS[next_loc]["day"])
+            # state["day"] = int(LOCATIONS[next_loc]["day"])
+            static_min_day = int(LOCATIONS[next_loc]["day"])
+            current_day    = (state.get("day") or 1) + 1
+            state["day"]   = max(current_day, static_min_day)
     else:
         if sub_idx + 1 < len(sub_scenarios):
             state["subTurnIndex"] = sub_idx + 1

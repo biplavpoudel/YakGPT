@@ -2,24 +2,26 @@
 
 import { EventBus }                                    from './core/event.js';
 import { renderChoices, getSelectedChoiceIndex,
-         resetSelectedChoice }                         from './render/choices.js';
+         resetSelectedChoice, getSelectedChoiceText }   from './render/choices.js';
 import { renderScene, triggerEndscreen,
-         updateSceneNarration }                        from './render/scene.js';
+         updateSceneNarration, markStreamAsComplete, 
+         resetTypewriter }                              from './render/scene.js';
 import { updateVitals }                                from './render/vitals.js';
 import { addJournalEntry, clearJournal }               from './render/journal.js';
 import { LOCATIONS, SCENARIOS }                        from './data.js';
 
 // ============================================================
-// GAME STATE (Synchronized with Python GameState typed dictionary)
+// GAME STATE (Synchronized with Python GameState)
 // ============================================================
 const INITIAL_STATE = {
   health: 100, acclimatization: 75, energy: 100, guideTrust: 100,
-  locationIndex: 0, subTurnIndex: 0, day: 1, stormPressure: 0, // <-- ADDED subTurnIndex
-  relationshipTier: "Wary Observer",                           // <-- ADDED relationship metadata
-  tensionModifier: "Low-Stakes / Discomfort",                  // <-- ADDED tension track tracking
-  shortHistoryLog: [],                                         // <-- ADDED rolling historical arrays
-  inventory: { water: 3, diamox: 2, layers: 1, food: 2 },
-  actionHistory: [], acclimatizationDayTaken: false,
+  locationIndex: 0, subTurnIndex: 0, day: 1, stormPressure: 0,
+  relationshipTier: "Wary Observer",
+  tensionModifier: "Low-Stakes / Discomfort",
+  shortHistoryLog: [],
+  inventory: { water: 3, diamox: 2, layers: 1, food: 2 }, // Matches domain defaults
+  actionHistory: [], // Populated on choice confirmation
+  acclimatizationDayTaken: false,
   layersUsed: false, backstoryUnlocked: false, endState: null,
 };
 
@@ -31,8 +33,10 @@ let gameState = structuredClone(INITIAL_STATE);
 function setYakLoading(on) {
   document.getElementById('yakThinking')?.classList.toggle('active', on);
   const yt = document.getElementById('yakText');
-  if (on && yt) yt.innerHTML =
-    '<span class="loading-dots"><span></span><span></span><span></span></span>';
+  if (on && yt) {
+    resetTypewriter('yakText'); // Stop active typing loops on processing
+    yt.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
+  }
 }
 
 function setSituationLoading(on) {
@@ -46,6 +50,15 @@ function setSituationLoading(on) {
 async function takeStep() {
   const idx = getSelectedChoiceIndex();
   if (idx < 0) return;
+
+  // Append history point locally right before payload execution to keep record trees true
+  const choiceText = getSelectedChoiceText(idx) || "Proceeding down the trail...";
+  gameState.actionHistory.push({
+    locationIndex: gameState.locationIndex,
+    subTurnIndex: gameState.subTurnIndex,
+    choiceIndex: idx,
+    choiceText: choiceText
+  });
 
   const btn = document.getElementById('stepBtn');
   if (!btn) return;
@@ -64,7 +77,7 @@ async function takeStep() {
 
     const reader = res.body.getReader();
     const dec    = new TextDecoder();
-    let   buf    = '';
+    let    buf    = '';
 
     while (true) {
       const { value, done } = await reader.read();
@@ -79,6 +92,10 @@ async function takeStep() {
         if (ev?.type) EventBus.emit(ev.type, ev.payload);
       }
     }
+
+    // FIX 1: Explicitly signal to your typewriter loop that stream network actions are done
+    markStreamAsComplete('yakText');
+
   } catch (err) {
     console.error('[takeStep]', err);
     alert('Game engine failed. Check console.');
@@ -160,6 +177,11 @@ const KNOWLEDGE_CATEGORIES = [
 function addKnowledgeEntry(locIdx, fact) {
   const panel = document.getElementById('knowledgePanel');
   if (!panel || !fact) return;
+
+  // Evade inserting duplicate fact logs if tab configurations call it repeatedly
+  const existingFacts = Array.from(panel.querySelectorAll('.knowledge-text')).map(el => el.textContent);
+  if (existingFacts.includes(fact)) return;
+
   const div = document.createElement('div');
   div.className = 'knowledge-item new dynamic';
   div.innerHTML = `
@@ -211,8 +233,6 @@ function useItem(item) {
 
   sessionStorage.setItem('yak_game_state', JSON.stringify(gameState));
   document.getElementById('modalOverlay')?.classList.remove('active');
-
-  // Trigger layout synchronization to ensure any open screen views update smoothly
   renderScene(gameState, LOCATIONS, SCENARIOS);
 }
 
@@ -249,7 +269,7 @@ const POSITION_TYPE_LABELS = {
 };
 
 function renderEndRows(type) {
-  const containerId = type === 'death'      ? 'autopsyRows'
+  const containerId = type === 'death'       ? 'autopsyRows'
                     : type === 'evacuation' ? 'evacRows'
                     : 'victoryRows';
 
@@ -263,8 +283,8 @@ function renderEndRows(type) {
   }
 
   container.innerHTML = history.map(entry => {
-    const loc     = LOCATIONS[entry.locationIndex] ?? { name: 'Unknown', alt: '' };
-    const meta    = POSITION_TYPE_LABELS[entry.choiceIndex] ?? { label: 'Custom', color: '#f44336' };
+    const loc  = LOCATIONS[entry.locationIndex] ?? { name: 'Unknown', alt: '' };
+    const meta = POSITION_TYPE_LABELS[entry.choiceIndex] ?? { label: 'Custom', color: '#f44336' };
     return `
       <div style="display:flex; gap:10px; align-items:flex-start; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
         <div style="min-width:90px; font-family:var(--font-mono); font-size:9px; color:var(--snow-faint); padding-top:2px;">
@@ -294,30 +314,23 @@ function initEventBindings() {
     updateVitals(gameState);
     updateTrailFromState(gameState);
     updateWeatherFromState(gameState);
-    updateInventoryDOM(); // Guarantees item count numbers refresh dynamically after turn processing resolves!
+    updateInventoryDOM();
+
+    // FIX 2: Evaluate medical fact logs directly from your live patch location variables
+    const currentLocIdx = gameState.locationIndex;
+    const currentSubIdx = gameState.subTurnIndex;
+    const scenarioList  = SCENARIOS[currentLocIdx];
+    
+    if (scenarioList && scenarioList[currentSubIdx]) {
+      const fact = scenarioList[currentSubIdx].fact;
+      if (fact) addKnowledgeEntry(currentLocIdx, fact);
+    }
   });
 
   EventBus.on('narration', data => {
     if (!data) return;
-
-    // FIX: Pass the active game trust metrics into the narration update handler
     updateSceneNarration(data, gameState.guideTrust);
-
     if (data.journal) addJournalEntry(data.journal);
-
-    // FIXED: Maps safely across dictionary definitions by looking up past entries explicitly
-    const history = gameState.actionHistory ?? [];
-    if (history.length > 0) {
-      const lastAction = history[history.length - 1];
-      const targetLocIdx = lastAction.locationIndex;
-      const targetSubIdx = lastAction.subTurnIndex;
-      
-      const scenarioList = SCENARIOS[targetLocIdx];
-      if (scenarioList && scenarioList[targetSubIdx]) {
-        const fact = scenarioList[targetSubIdx].fact;
-        if (fact) addKnowledgeEntry(targetLocIdx, fact);
-      }
-    }
   });
 
   EventBus.on('choices', choices => {
@@ -327,7 +340,7 @@ function initEventBindings() {
   EventBus.on('end_state', payload => {
     const type = payload?.type ?? payload;
     triggerEndscreen(type);
-    renderEndRows(type); // <-- FIXED TYPO HERE
+    renderEndRows(type); 
   });
 }
 

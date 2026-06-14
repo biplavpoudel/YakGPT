@@ -98,7 +98,7 @@ def get_llm_provider() -> BaseChatModel:
 
         llm = HuggingFaceEndpoint(
             repo_id=model,
-            task="text-generation",
+            task="conversational",
             huggingfacehub_api_token=api_key,
             max_new_tokens=512,
             temperature=0.7,
@@ -168,6 +168,7 @@ def get_llm_provider() -> BaseChatModel:
         return ChatGoogleGenerativeAI(
             google_api_key=SecretStr(api_key),
             model=model,
+            convert_system_message_to_human=True        # Apparently, Gemini doesnt support system messages
         )
 
 

@@ -91,3 +91,26 @@ function selectChoice(btn, idx) {
   // Emit so index.js knows a choice was made
   EventBus.emit('choice_selected', idx);
 }
+
+// ============================================================
+// GET SELECTED CHOICE TEXT (ADDED)
+// Extracts the clean decision string for the history tracking array
+// ============================================================
+export function getSelectedChoiceText(selectedIndex) {
+  if (selectedIndex < 0) return "Proceeding down the trail...";
+  
+  const buttons = document.querySelectorAll('.choice-btn');
+  if (buttons.length > selectedIndex) {
+    const btn = buttons[selectedIndex];
+    
+    // Create a clone of the button so we can strip the layout spans 
+    // (.choice-tag and .choice-consequence) without altering the active UI DOM
+    const clone = btn.cloneNode(true);
+    clone.querySelectorAll('.choice-tag, .choice-consequence').forEach(el => el.remove());
+    
+    // Return the immaculate inner choice text string
+    return clone.textContent.trim();
+  }
+  
+  return "Proceeding down the trail...";
+}
