@@ -2,7 +2,7 @@
 
 import os
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import gradio as gr
 
@@ -18,6 +18,11 @@ app.include_router(game_router)
 # 3. Mount your static game asset directories
 app.mount("/scenes", StaticFiles(directory="scenes"), name="scenes")
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
+@app.get('/favicon.ico', include_in_schema=False)
+
+async def favicon():
+    # If the icon is inside your frontend folder:
+    return FileResponse('frontend/favicon.ico')
 
 # 4. Serve your custom pixel-perfect UI at the absolute root route
 @app.get("/", response_class=HTMLResponse)
