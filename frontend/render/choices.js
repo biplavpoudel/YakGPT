@@ -1,5 +1,5 @@
 // ============================================================
-// CHOICES RENDERER
+// CHOICES RENDERER (RPG 3-Tier Risk Color-Coded)
 // ============================================================
 import { EventBus } from '../core/event.js';
 
@@ -26,49 +26,56 @@ export function renderChoices(choices, guideTrust = 100) {
   const area = document.getElementById('choicesArea');
   if (!area) return;
 
-  // FIX: Do not wipe the DOM if the choices payload is empty or invalid.
-  // This protects the buttons rendered by scene.js from being overwritten 
-  // by an empty backend stream payload.
+  // Protects the DOM from being overwritten by empty backend payloads
   if (!choices || choices.length === 0) return;
 
-  // Now it is safe to clear and render
+  // Safe to clear and render
   area.innerHTML = '';
 
   choices.forEach((c, i) => {
     // --------------------------------------------------------
-    // ADAPTIVE METADATA EXTRACTION
-    // Index 0 is systematically treated as the deliberate/safe path.
-    // If trust collapses, the guide refuses to point it out.
+    // EXTRACT RPG RISK TIERS
+    // 1. First checks if backend explicitly provided a 'tier' ('safe' | 'risky' | 'reckless')
+    // 2. If missing, falls back to position-based indexing (0=safe, 1=risky, 2=reckless)
     // --------------------------------------------------------
-    const isSafeIndex   = (i === 0);
-    const trustHidden   = guideTrust < 50 && isSafeIndex;
+    let displayType = c.type;
     
-    // Aesthetic fallbacks for styling (keeps your CSS rule bindings happy)
-    const displayType   = isSafeIndex ? 'safe' : 'risky';
+    if (!displayType) {
+      if (i === 0) displayType = 'safe';
+      else if (i === 1) displayType = 'risky';
+      else displayType = 'reckless';
+    }
+
+    // Dorje hides the conservative/safe choice if he doesn't respect you
+    const trustHidden = guideTrust < 50 && displayType === 'safe';
     const effectiveType = trustHidden ? 'hidden' : displayType;
 
     const btn = document.createElement('button');
     btn.className = `choice-btn ${effectiveType}`;
     btn.onclick   = () => selectChoice(btn, i);
 
+    // Build the visual RPG tag
     const tag = document.createElement('span');
-    tag.className   = `choice-tag tag-${effectiveType}`;
+    tag.className = `choice-tag tag-${effectiveType}`;
     
-    // Dynamic text masking based on Dorje's active respect for you
-    tag.textContent = trustHidden
-      ? '???'
-      : displayType.charAt(0).toUpperCase() + displayType.slice(1);
+    if (trustHidden) {
+      tag.textContent = '???';
+    } else {
+      // Human-readable labels matching your design specs
+      if (displayType === 'safe') tag.textContent = 'Conservative';
+      else if (displayType === 'risky') tag.textContent = 'Calculated';
+      else if (displayType === 'reckless') tag.textContent = 'Reckless';
+    }
 
+    // Build the immersive consequence subtext
     const conseq = document.createElement('span');
-    conseq.className   = 'choice-consequence';
+    conseq.className = 'choice-consequence';
     
-    // Our new choices don't carry hardcoded 'consequence' strings because
-    // the LLM computes the narrative fallout dynamically. 
-    // We display a clean immersion prompt instead.
     conseq.textContent = trustHidden
       ? '(Dorje remains silent. He refuses to guide your judgment.)'
       : (c.consequence || '⚠️ This decision will permanently alter your path metric weights.');
 
+    // Assemble components cleanly
     btn.appendChild(tag);
     btn.appendChild(document.createTextNode(' ' + c.text));
     btn.appendChild(conseq);
@@ -93,8 +100,8 @@ function selectChoice(btn, idx) {
 }
 
 // ============================================================
-// GET SELECTED CHOICE TEXT (ADDED)
-// Extracts the clean decision string for the history tracking array
+// GET SELECTED CHOICE TEXT
+// Extracts the clean decision string for history arrays
 // ============================================================
 export function getSelectedChoiceText(selectedIndex) {
   if (selectedIndex < 0) return "Proceeding down the trail...";
@@ -103,12 +110,9 @@ export function getSelectedChoiceText(selectedIndex) {
   if (buttons.length > selectedIndex) {
     const btn = buttons[selectedIndex];
     
-    // Create a clone of the button so we can strip the layout spans 
-    // (.choice-tag and .choice-consequence) without altering the active UI DOM
     const clone = btn.cloneNode(true);
     clone.querySelectorAll('.choice-tag, .choice-consequence').forEach(el => el.remove());
     
-    // Return the immaculate inner choice text string
     return clone.textContent.trim();
   }
   
