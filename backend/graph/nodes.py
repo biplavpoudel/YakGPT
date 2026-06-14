@@ -215,10 +215,13 @@ def generate_llm_narrations(state: GameState) -> GameState:
             "health":      state.get("health") or 100,
             "trust":       state.get("guideTrust") or 100,
             "storm":       state.get("stormPressure") or 0,
-            "history_log": history_context  # Matches our narration.md key
+            "history_log": history_context,
+            "relationship": relationship,
+            "tension":      tension
         },
         fallback_text=yak_fallback
     )
+    print("DEBUG:" + repr(state["current_yak_narration"]))
 
     state["current_yak_audio"] = _generate_piper_tts_base64(state["current_yak_narration"])
 
@@ -263,12 +266,12 @@ def generate_llm_narrations(state: GameState) -> GameState:
     state["current_journal_entry"] = _invoke(
         journal_prompt | llm | StrOutputParser(), 
         {
-            "loc":          loc["name"],
-            "day":          state.get("day") or 1,
-            "health":       state.get("health") or 100,
-            "acclim":       state.get("acclimatization") or 75,
+            "loc": loc["name"],
+            "day": state.get("day") or 1,
+            "health": state.get("health") or 100,
+            "acclim":state.get("acclimatization") or 75,
+            "history": history_context,
             "relationship": relationship,
-            "history":      history_context
         },
         fallback_text=journal_fallback
     )
@@ -339,4 +342,4 @@ def route_after_turn(state: GameState) -> str:
     """
     if state.get("endState"):
         return "__end__"
-    return "events"
+    return "build_events"
