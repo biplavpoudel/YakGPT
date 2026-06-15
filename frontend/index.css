@@ -174,7 +174,7 @@ body.weather-storm .scene-bg {
 }
 
 .scene-gameover {
-  background-image: url('/scenes/game-over.jpg');
+  background-image: url('/scenes/game-over.png');
   background-size: cover;
   background-position: center;
 }
