@@ -156,24 +156,26 @@ def apply_game_rules(state: GameState) -> GameState:
     is_rest   = choice.get("rest",   False)
     is_travel = choice.get("travel", False)
 
-    if is_rest:
-        state["day"]    = (state.get("day") or 1) + 1
-        state["energy"] = clamp((state.get("energy") or 100) + 20)
-        state["health"] = clamp((state.get("health") or 100) + 10)
-    elif is_travel:
-        next_loc = loc_idx + 1
-        state["locationIndex"] = next_loc
-        state["subTurnIndex"]  = 0
+    time_cost = 0
 
-        # Enforcing that time moves forward by 1 day, or snaps to the destination's minimum day requirement
-        if next_loc < len(LOCATIONS):
-            # state["day"] = int(LOCATIONS[next_loc]["day"])
-            static_min_day = int(LOCATIONS[next_loc]["day"])
-            current_day    = (state.get("day") or 1) + 1
-            state["day"]   = max(current_day, static_min_day)
+    if is_rest:
+        time_cost = 1
+        # Inline safe cap at 100 max value
+        state["energy"] = min((state.get("energy") or 100) + 20, 100)
+        state["health"] = min((state.get("health") or 100) + 10, 100)
+
+    elif is_travel:
+        time_cost = 1
+        next_idx = loc_idx + 1
+        # Caps the index at the final location map array bounds
+        state["locationIndex"] = min(next_idx, len(LOCATIONS) - 1)
+        state["subTurnIndex"] = 0
+
     else:
-        if sub_idx + 1 < len(sub_scenarios):
-            state["subTurnIndex"] = sub_idx + 1
+       if sub_idx + 1 < len(sub_scenarios):
+           state["subTurnIndex"] = sub_idx + 1
+
+    state["day"] = (state.get("day") or 1) + time_cost
 
     # --------------------------------------------------------
     # 5. METADATA + END STATE CRITERIA
