@@ -52,27 +52,24 @@ def get_llm_provider() -> BaseChatModel:
         top_p = float(os.getenv("LLAMA_TOP_P", "0.9"))
         max_tokens = int(os.getenv("LLAMA_MAX_TOKENS", "512"))
         repeat_penalty = float(os.getenv("LLAMA_REPEAT_PENALTY", "1.1"))
-        stop = ["<|im_end|>", "<|im_start|>"]
+        stop = ["<|im_end|>", "<|im_start|>", "\n<|im_end|>", "<|im_end|>\n"]
 
         if not os.getenv("OPENAI_API_KEY"):
             os.environ["OPENAI_API_KEY"] = "sk-no-key-required"
 
-        # ./llama-server --model ~/models/llama/dark-planet-8b.gguf --ctx-size 4096   --n-gpu-layers -1   --port 8080   --chat-template chatml
+        api_base = os.getenv("OPENAI_API_BASE", "http://localhost:8080/v1")
 
+        # llama-server --model ~/models/llama/dark-planet-8b.gguf --ctx-size 4096   --n-gpu-layers -1   --port 8080   --chat-template chatml
+    
         return ChatOpenAI(
-            # Core Client Params
-            model="gpt-3.5-turbo",         # Just a placeholder, using any name works here
-            base_url="http://localhost:8080/v1",
-            temperature=temp,                   
-            # Custom Server Params
-            # Utilizing model_kwargs ensures these exact keys land un-altered in the root payload body
-            model_kwargs={
-                "max_tokens": max_tokens,   # Enforces the stop ceiling on llama-server natively
-                "top_p": top_p,                   # Applies nucleus sampling
-                "frequency_penalty": repeat_penalty, # Suppresses loop generation and narrative repetition
-                "stop": stop,
-            }
-        )
+            model="gpt-3.5-turbo",                  
+            # base_url="http://localhost:8080/v1",
+            base_url=api_base,
+            temperature=temp,
+            max_completion_tokens=max_tokens,                  # Enforces the stop ceiling on llama-server natively
+            top_p=top_p,                            # Applies nucleus sampling
+            frequency_penalty=repeat_penalty,       # Suppresses loop generation and narrative repetition
+        ).bind(stop=stop) # type: ignore[return-value]
 
     # --------------------------------------------------------
     # OLLAMA

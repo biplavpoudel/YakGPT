@@ -1,9 +1,10 @@
 from __future__ import annotations
-import subprocess
+# import subprocess
 import tempfile
 import base64
 import os
 import io
+import asyncio
 from typing import Any, Dict, List, cast
 
 from backend.graph.state import GameState
@@ -21,7 +22,6 @@ from backend.services.tts_engine import KokoroEngine
 import sys
 print("NODES MODULE ID:", id(sys.modules[__name__]))
 print("NODES FILE:", __file__)
-
 
 
 # ============================================================
@@ -104,18 +104,41 @@ def apply_deterministic_rules(state: GameState) -> GameState:
 # ============================================================
 def prepare_turn_context(state: GameState) -> GameState:
     """
-    If a player has a completely normal turn where nothing special happens,
-    our rules engine might not write anything for relationshipTier or tensionModifier.
-    If those slots are totally empty (None), our LLM prompt will panic and crash
-    because it doesn't know how to fill in the blank text template.
-
-    This function checks those slots. If they are empty,
-    it fills them with standard baseline defaults like "Wary Observer" or "Low-Stakes".
-    It ensures that every single turn looks uniform and pristine right before the LLM reads it.
+    Validates relationship and environmental contexts, protects 
+    chronological progression parameters from page refreshes, and 
+    safeguards sub-turn counter boundaries cleanly.
     """
     # Enforce standard single-instance tracker tag
     state["llm_provider"] = "default"
     
+    # --------------------------------------------------------
+    # 🛡️ THE TIME PROTECTION GATE
+    # --------------------------------------------------------
+    latest_choice = state.get("latest_choice_index", -1)
+    current_day = state.get("day", 1)
+    current_sub_turn = state.get("subTurnIndex", 0)
+
+    if latest_choice >= 0:
+        print(f"🎮 [Active Gameplay Action] Choice Index confirmed: {latest_choice}")
+        
+        # Advance the fractional micro-turn timestamp clock
+        current_sub_turn += 1
+        
+        # Assume 3 micro-actions per camp loop zone before night falls
+        if current_sub_turn >= 3:
+            current_day += 1
+            current_sub_turn = 0
+            print(f"🌙 Night falls on the circuit. Advancing chronometer to Day {current_day}.")
+        
+        state["day"] = current_day
+        state["subTurnIndex"] = current_sub_turn
+    else:
+        # A cold-boot sync pass or browser refresh page trigger has occurred
+        print("🏔️ Boot/Refresh payload detected. Maintaining current narrative timestamp values.")
+
+    # Reset the choice tracker back to neutral so it defaults safely on downstream ticks
+    state["latest_choice_index"] = -1
+
     # Initialize baseline text fallbacks if rules engine updates are partial
     if not state.get("relationshipTier"):
         state["relationshipTier"] = "Wary Observer"
@@ -129,7 +152,7 @@ def prepare_turn_context(state: GameState) -> GameState:
 # ============================================================
 # NODE 3: LLM NARRATIONS
 # ============================================================
-def generate_llm_narrations(state: GameState) -> GameState:
+async def generate_llm_narrations(state: GameState) -> GameState:
     llm = get_llm_provider()
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -172,7 +195,7 @@ def generate_llm_narrations(state: GameState) -> GameState:
         state["current_yak_narration"]  = closing_text
         state["current_situation_text"] = "The journey terminates here."
         state["current_journal_entry"]  = "Log closed."
-        state["current_yak_audio"]      = _generate_piper_tts_base64(closing_text)
+        state["current_yak_audio"]      = await asyncio.to_thread(_generate_piper_tts_base64, closing_text)
         return state
 
     # --------------------------------------------------------
@@ -214,7 +237,8 @@ def generate_llm_narrations(state: GameState) -> GameState:
     )
     print("DEBUG:" + repr(state["current_yak_narration"]))
 
-    state["current_yak_audio"] = _generate_piper_tts_base64(state["current_yak_narration"])
+    yak_text = state["current_yak_narration"]
+    state["current_yak_audio"] = await asyncio.to_thread(_generate_piper_tts_base64, yak_text)
 
     # --------------------------------------------------------
     # ENVIRONMENT / SITUATION

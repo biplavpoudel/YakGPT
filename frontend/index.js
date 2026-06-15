@@ -51,8 +51,9 @@ async function takeStep() {
   const idx = getSelectedChoiceIndex();
   if (idx < 0) return;
 
-  // Append history point locally right before payload execution to keep record trees true
   const choiceText = getSelectedChoiceText(idx) || "Proceeding down the trail...";
+  
+  // 1. Log the choice locally
   gameState.actionHistory.push({
     locationIndex: gameState.locationIndex,
     subTurnIndex: gameState.subTurnIndex,
@@ -67,13 +68,19 @@ async function takeStep() {
   setYakLoading(true);
   setSituationLoading(true);
 
+  const targetUrl = `${window.location.origin}/play`;
+
   try {
-    const res = await fetch('/play', {
+    const statePayload = { ...gameState };
+    statePayload.latest_choice_index = idx;
+
+    const res = await fetch(targetUrl, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state: { ...gameState, latest_choice_index: idx } }),
+      body: JSON.stringify({ state: statePayload }),
     });
-    if (!res.ok) throw new Error(`Backend error: ${res.status}`);
+    
+    if (!res.ok) throw new Error(`Backend server responded with status: ${res.status}`);
 
     const reader = res.body.getReader();
     const dec    = new TextDecoder();
@@ -89,16 +96,21 @@ async function takeStep() {
         if (!line.trim()) continue;
         let ev;
         try { ev = JSON.parse(line); } catch { continue; }
-        if (ev?.type) EventBus.emit(ev.type, ev.payload);
+        if (ev?.type) {
+           EventBus.emit(ev.type, ev.payload);
+        }
       }
     }
 
-    // FIX 1: Explicitly signal to your typewriter loop that stream network actions are done
     markStreamAsComplete('yakText');
 
+    // 🌟 THE FIX: Forcefully preserve and commit local modifications to cache
+    // This stops state pollution on an immediate page reload/refresh
+    sessionStorage.setItem('yak_game_state', JSON.stringify(gameState));
+
   } catch (err) {
-    console.error('[takeStep]', err);
-    alert('Game engine failed. Check console.');
+    console.error('[takeStep] Critical connection failure:', err);
+    EventBus.emit('error', { message: err.message || "Network request timed out or was terminated by the server host." });
   } finally {
     btn.disabled    = false;
     btn.textContent = 'Confirm & Continue →';
@@ -116,10 +128,15 @@ async function fetchInitialNarration() {
   setSituationLoading(true);
 
   try {
+
+    const statePayload = { ...gameState };
+    statePayload.latest_choice_index = -1; // Initializing marker
+
     const res = await fetch('/play', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state: { ...gameState, latest_choice_index: -1 } }),
+      body: JSON.stringify({ state: statePayload }), // Properly wrapped mapping
+      // body: JSON.stringify({ state: { ...gameState, latest_choice_index: -1 } }),
     });
     if (!res.ok) throw new Error(`Backend error: ${res.status}`);
 
@@ -352,19 +369,39 @@ function renderEndRows(type) {
 // EVENT BUS BINDINGS
 // ============================================================
 function initEventBindings() {
+
+  EventBus.on('error', (errData) => {
+    console.error("🚨 [EventBus] Critical Game Engine Error Caught:", errData);
+    const sitText = document.getElementById('situationText');
+    if (sitText) {
+      sitText.innerHTML = `<span style="color:#ff6b6b; font-weight:bold;">⚠️ Trail pipeline error:</span> ${errData.message || JSON.stringify(errData)}`;
+    }
+  });
+
   EventBus.on('state_patch', patch => {
     if (!patch) return;
+
+    // 1. Grab your fresh local choices history BEFORE overwriting the object
+    const localHistory = gameState.actionHistory ?? [];
+    
+    // 2. Safely apply the backend balance changes (vitals, locations, etc.)
     gameState = { ...gameState, ...patch };
     
+    // 3. Re-inject the decision logs if the backend omitted or emptied them
+    if (!gameState.actionHistory || gameState.actionHistory.length === 0) {
+      gameState.actionHistory = localHistory;
+    }
+    
+    // 4. Commit the synchronized bundle to the browser cache
     sessionStorage.setItem('yak_game_state', JSON.stringify(gameState));
 
+    // --- Rest of your UI rendering pipeline remains perfectly untouched ---
     renderScene(gameState, LOCATIONS, SCENARIOS);
     updateVitals(gameState);
     updateTrailFromState(gameState);
     updateWeatherFromState(gameState);
     updateInventoryDOM();
 
-    // FIX 2: Evaluate medical fact logs directly from your live patch location variables
     const currentLocIdx = gameState.locationIndex;
     const currentSubIdx = gameState.subTurnIndex;
     const scenarioList  = SCENARIOS[currentLocIdx];
@@ -373,7 +410,7 @@ function initEventBindings() {
       const fact = scenarioList[currentSubIdx].fact;
       if (fact) addKnowledgeEntry(currentLocIdx, fact);
     }
-  });
+  }); 
 
   EventBus.on('narration', data => {
     if (!data) return;

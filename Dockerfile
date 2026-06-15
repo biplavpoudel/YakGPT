@@ -42,4 +42,5 @@ ENV KOKORO_MODEL_PATH="/app/models/kokoro-v1.0.onnx" \
 COPY --chown=user:user . .
 
 #  11. 'python' now naturally refers to the venv python, which has all our dependencies
-CMD ["/app/.venv/bin/python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+# CMD ["/app/.venv/bin/python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["gradio", "app.py"]

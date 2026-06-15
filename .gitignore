@@ -12,6 +12,7 @@ pyvenv.cfg
 .venv
 pip-selfcheck.json
 *test*.*
+CHANGELOG.md
 
 # PiperTTS models
 models/*

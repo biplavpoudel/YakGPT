@@ -81,9 +81,9 @@ async def run_game_stream(client_state: Dict[str, Any]) -> AsyncGenerator[str, N
     
     try:
         # Pass the bridged dictionary state down into your graph runner
-        result: GameState = game_graph.invoke(typed_state)  # type: ignore[arg-type]
+        result: GameState = await game_graph.ainvoke(typed_state)  # type: ignore[arg-type]
     except Exception as exc:
-        yield ndjson_line({"type": "error", "payload": str(exc)})
+        yield ndjson_line({"type": "error", "payload": {"message": str(exc)}})
         return
 
     # --------------------------------------------------------
