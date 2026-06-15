@@ -15,11 +15,13 @@ from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import StrOutputParser
 
 import soundfile as sf
-from kokoro_onnx import Kokoro
+from backend.services.tts_engine import KokoroEngine
 
-# Initialize paths relative to environment configuration or defaults
-MODEL_PATH = os.getenv("KOKORO_MODEL_PATH", "models/kokoro-v1.0.onnx")
-VOICES_PATH = os.getenv("KOKORO_VOICES_PATH", "models/voices-v1.0.bin")
+# FOR DEBUGGING
+import sys
+print("NODES MODULE ID:", id(sys.modules[__name__]))
+print("NODES FILE:", __file__)
+
 
 
 # ============================================================
@@ -60,26 +62,13 @@ def _invoke(chain: Any, inputs: Dict[str, Any], fallback_text: str) -> str:
         print(f"[FALLBACK TRIGGERED] LLM Error or Timeout: {e}")
         return fallback_text
 
-# Global singleton so it initializes ONCE on server boot
-_kokoro_instance = None
-
-def get_kokoro_tts():
-    global _kokoro_instance
-    if _kokoro_instance is None:
-        if os.path.exists(MODEL_PATH) and os.path.exists(VOICES_PATH):
-            print(f"[TTS] Loading Kokoro engine from {MODEL_PATH}...")
-            _kokoro_instance = Kokoro(MODEL_PATH, VOICES_PATH)
-        else:
-            print(f"[TTS WARNING] Kokoro files not found. Audio generation will be skipped.")
-    return _kokoro_instance
-
 
 def _generate_piper_tts_base64(text: str) -> str:
     """
     Synthesizes text into high-quality sarcastic speech entirely in RAM 
     and returns a Base64 data URI string.
     """
-    tts = get_kokoro_tts()
+    tts = KokoroEngine.get()
     if not tts:
         return ""
 
@@ -255,25 +244,38 @@ def generate_llm_narrations(state: GameState) -> GameState:
     # --------------------------------------------------------
     # DORJE'S JOURNAL
     # --------------------------------------------------------
-    journal_prompt = ChatPromptTemplate.from_template(
-        "You are Dorje, an experienced Himalayan guide writing a private log entry.\n"
-        "YOUR CURRENT RELATIONSHIP STATE: {relationship}\n"
-        "THE TREKKER'S ACTION RECORD:\n{history_log}\n\n"
-        "Write a raw, 2-sentence private journal entry evaluating the trekker.\n"
-        "Location: {loc}. Day: {day}. Health: {health}/100. Acclimatization: {acclim}/100.\n"
-        "Reflect directly on their past choices, your current level of trust in them, and whether they will survive the pass or become a fatal liability."
-    )
+    journal_path = os.path.join(base_dir, "prompts", "dorje_journal.md")
+    with open(journal_path, "r", encoding="utf-8") as f:
+        journal_base_prompt = f.read()
+
+    action_history = state.get("actionHistory") or []
+    if action_history:
+        last_choice_text = action_history[-1]["choiceText"]
+    else:
+        last_choice_text = "just beginning the trek"
+
+    journal_prompt = ChatPromptTemplate.from_messages([
+        ("system", journal_base_prompt),
+        ("human", (
+            "THE TREKKER'S ACTION RECORD:\n{history_log}\n\n"
+            "CURRENT STATS:\n"
+            "Health: {health}/100. Acclimatization: {acclim}/100. Guide Trust: {trust}/100.\n\n"
+            "INSTRUCTION: Write Dorje's log entry using 1-2 realistic, grounded sentences based on the role rules."
+        ))
+    ])
+
     journal_fallback = FALLBACKS["journal_risky"] if (state.get("health") or 100) < 50 else FALLBACKS["journal_safe"]
     
     state["current_journal_entry"] = _invoke(
         journal_prompt | llm | StrOutputParser(), 
         {
-            "loc": loc["name"],
-            "day": state.get("day") or 1,
-            "health": state.get("health") or 100,
-            "acclim":state.get("acclimatization") or 75,
+            "last_choice_text": last_choice_text,
+            "location_name": loc["name"],
+            "elevation": loc["alt"],
             "history_log": history_context,
-            "relationship": relationship,
+            "health": state.get("health") or 100,
+            "acclim": state.get("acclimatization") or 75,
+            "trust": state.get("guideTrust") or 100
         },
         fallback_text=journal_fallback
     )
