@@ -100,46 +100,30 @@ def apply_deterministic_rules(state: GameState) -> GameState:
 
 
 # ============================================================
-# NODE 2: STATE INITIALIZATION & SANITATION (REPLACED SELECTOR)
+# NODE 2: STATE INITIALIZATION & SANITATION
 # ============================================================
 def prepare_turn_context(state: GameState) -> GameState:
     """
-    Validates relationship and environmental contexts, protects 
-    chronological progression parameters from page refreshes, and 
-    safeguards sub-turn counter boundaries cleanly.
+    Sanitizes state hooks between ticks and safeguards baseline text fallbacks.
+    Does NOT calculate time or increment subTurnIndex to prevent data corruption.
     """
     # Enforce standard single-instance tracker tag
     state["llm_provider"] = "default"
     
-    # --------------------------------------------------------
-    # 🛡️ THE TIME PROTECTION GATE
-    # --------------------------------------------------------
     latest_choice = state.get("latest_choice_index", -1)
-    current_day = state.get("day", 1)
-    current_sub_turn = state.get("subTurnIndex", 0)
 
     if latest_choice >= 0:
-        print(f"🎮 [Active Gameplay Action] Choice Index confirmed: {latest_choice}")
-        
-        # Advance the fractional micro-turn timestamp clock
-        current_sub_turn += 1
-        
-        # Assume 3 micro-actions per camp loop zone before night falls
-        if current_sub_turn >= 3:
-            current_day += 1
-            current_sub_turn = 0
-            print(f"🌙 Night falls on the circuit. Advancing chronometer to Day {current_day}.")
-        
-        state["day"] = current_day
-        state["subTurnIndex"] = current_sub_turn
+        print(f"🎮 [Active Gameplay Action] Choice Index confirmed: {latest_choice}. Time progression evaluated by game_rules.")
     else:
         # A cold-boot sync pass or browser refresh page trigger has occurred
         print("🏔️ Boot/Refresh payload detected. Maintaining current narrative timestamp values.")
 
-    # Reset the choice tracker back to neutral so it defaults safely on downstream ticks
+    # 🌟 1. SANITIZE INTERACTION STATE
+    # Wipes the choice tracker index back to neutral so downstream nodes 
+    # sit cleanly and wait for a fresh player click event to register.
     state["latest_choice_index"] = -1
 
-    # Initialize baseline text fallbacks if rules engine updates are partial
+    # 🌟 2. INITIALIZE MISSING NARRATIVE KEYS (Failsafes)
     if not state.get("relationshipTier"):
         state["relationshipTier"] = "Wary Observer"
 

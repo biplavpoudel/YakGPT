@@ -150,8 +150,8 @@ def apply_game_rules(state: GameState) -> GameState:
     })
     state["actionHistory"] = history
 
-    # --------------------------------------------------------
-    # 4. MOVEMENT LOGIC
+# --------------------------------------------------------
+    # 4. MOVEMENT LOGIC (Fixed: Cyclic Day End)
     # --------------------------------------------------------
     is_rest   = choice.get("rest",   False)
     is_travel = choice.get("travel", False)
@@ -160,20 +160,24 @@ def apply_game_rules(state: GameState) -> GameState:
 
     if is_rest:
         time_cost = 1
-        # Inline safe cap at 100 max value
         state["energy"] = min((state.get("energy") or 100) + 20, 100)
         state["health"] = min((state.get("health") or 100) + 10, 100)
 
     elif is_travel:
         time_cost = 1
         next_idx = loc_idx + 1
-        # Caps the index at the final location map array bounds
         state["locationIndex"] = min(next_idx, len(LOCATIONS) - 1)
         state["subTurnIndex"] = 0
 
     else:
-       if sub_idx + 1 < len(sub_scenarios):
-           state["subTurnIndex"] = sub_idx + 1
+        # Standard story/micro-action branch
+        if sub_idx + 1 < len(sub_scenarios):
+            state["subTurnIndex"] = sub_idx + 1
+        else:
+            # 🌙 Out of dialogue options! Night falls over the campsite.
+            # Roll over to a new day and cycle back to the first scenario hook.
+            state["subTurnIndex"] = 0
+            time_cost = 1
 
     state["day"] = (state.get("day") or 1) + time_cost
 
