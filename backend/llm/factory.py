@@ -136,19 +136,19 @@ def get_llm_provider() -> BaseChatModel:
 
         return ChatOpenAI(api_key=SecretStr(api_key), model=model)
 
-    # --------------------------------------------------------
-    # ANTHROPIC (Official)
-    # --------------------------------------------------------
-    elif provider == "anthropic":
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        model = os.getenv("ANTHROPIC_MODEL_NAME", "claude-3-5-sonnet-latest")
-        timeout = 2.0
-        stop = None
+    # # --------------------------------------------------------
+    # # ANTHROPIC (Official)
+    # # --------------------------------------------------------
+    # elif provider == "anthropic":
+    #     api_key = os.getenv("ANTHROPIC_API_KEY")
+    #     model = os.getenv("ANTHROPIC_MODEL_NAME", "claude-3-5-sonnet-latest")
+    #     timeout = 2.0
+    #     stop = None
 
-        if not api_key:
-            raise LLMConfigError("Missing required environment variable: ANTHROPIC_API_KEY")
+    #     if not api_key:
+    #         raise LLMConfigError("Missing required environment variable: ANTHROPIC_API_KEY")
 
-        return ChatAnthropic(model_name=model, timeout=timeout, stop=stop, api_key=SecretStr(api_key), )
+    #     return ChatAnthropic(model_name=model, timeout=timeout, stop=stop, api_key=SecretStr(api_key), )
 
     # --------------------------------------------------------
     # GEMINI (Official Google GenAI)        
