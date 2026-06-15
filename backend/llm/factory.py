@@ -94,12 +94,11 @@ def get_llm_provider() -> BaseChatModel:
             raise LLMConfigError("Missing required environment variable: HF_TOKEN")
 
         llm = HuggingFaceEndpoint(
-            repo_id=model,
-            task="conversational",
+            model=model,
+            task="text_generation",
             huggingfacehub_api_token=api_key,
             max_new_tokens=512,
             temperature=0.7,
-            model=model
         )
         
         return ChatHuggingFace(llm=llm)
