@@ -1928,6 +1928,28 @@ body.weather-storm .scene-overlay {
   box-shadow: 0 6px 20px rgba(240, 208, 112, 0.4);
 }
 
+.start-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.start-btn-secondary {
+  background: transparent;
+  color: var(--snow-dim);
+  border: 1px solid rgba(224, 184, 74, 0.4);
+  box-shadow: none;
+}
+
+.start-btn-secondary:hover {
+  background: rgba(224, 184, 74, 0.1);
+  color: var(--snow);
+  border-color: var(--gold-bright);
+  box-shadow: 0 4px 15px rgba(224, 184, 74, 0.2);
+}
+
 .audio-btn {
   background: transparent;
   border: none;

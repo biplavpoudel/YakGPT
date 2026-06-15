@@ -466,12 +466,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const savedState = sessionStorage.getItem('yak_game_state');
   const startBtn = document.getElementById('startTrekBtn');
+  const resetBtn = document.getElementById('resetTrekBtn');
 
   if (savedState) {
     try {
       gameState = JSON.parse(savedState);
       console.log("🏔️ Session data restored from cache framework:", gameState);
       if (startBtn) startBtn.textContent = 'Resume Trek';
+      if (resetBtn) resetBtn.style.display = 'inline-block';
 
       // Restore play audio button visibility if saved audio exists
       if (gameState.lastNarration) {
@@ -484,9 +486,13 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
       console.error("Session serialization breakdown, falling back to clean initialization.", e);
       gameState = structuredClone(INITIAL_STATE);
+      if (startBtn) startBtn.textContent = 'Start Trek';
+      if (resetBtn) resetBtn.style.display = 'none';
     }
   } else {
     gameState = structuredClone(INITIAL_STATE);
+    if (startBtn) startBtn.textContent = 'Start Trek';
+    if (resetBtn) resetBtn.style.display = 'none';
   }
 
   // Set dynamic background image on start screen based on current locationIndex
@@ -539,6 +545,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fresh session: Fetch narration from backend
         fetchInitialNarration();
       }
+    };
+  }
+
+  if (resetBtn) {
+    resetBtn.onclick = () => {
+      const overlay = document.getElementById('startScreen');
+      if (overlay) overlay.classList.add('fade-out');
+
+      console.log("[resetBtn.onclick] Starting fresh session (from beginning).");
+      restartGame();
     };
   }
 });
