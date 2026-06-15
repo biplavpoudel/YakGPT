@@ -1,0 +1,37 @@
+# Git
+.git
+.github
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.venv
+.mypy_cache
+.pytest_cache
+.ruff_cache
+*.egg-info
+.tox
+
+# IDE
+.idea
+.vscode
+.env
+CHANGELOG.md
+*test*.*
+
+# Worktree
+worktree
+
+# Test artifacts
+.coverage
+htmlcov
+coverage.xml
+
+# Build artifacts
+dist
+build
+
+# Misc
+*.log
+.DS_Store
