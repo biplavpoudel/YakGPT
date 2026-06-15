@@ -40,7 +40,7 @@ def get_llm_provider() -> BaseChatModel:
     # Force a fresh disk read right before checking the provider variable
     load_dotenv(override=True)
 
-    provider = os.getenv("LLM_PROVIDER", "huggingface").lower()
+    provider = (os.getenv("LLM_PROVIDER") or "gemini").  lower()
     print(f"--- ACTIVE LLM PROVIDER: {repr(provider)} ---")
 
     # --------------------------------------------------------
