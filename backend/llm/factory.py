@@ -10,7 +10,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 # from llama_cpp import Llama
 # from langchain_community.chat_models import LlamaCpp
-from langchain_community.llms import LlamaCpp
+# from langchain_community.llms import LlamaCpp
 from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
 
 from pydantic import SecretStr
