@@ -20,68 +20,154 @@ license: mit
   class="scene-gif"
 />
 
-**Track Submisison:** 🍄 An Adventure in Thousand Token Wood 
-
-# 📖 Summary
-**YakGPT: Can You Survive Thorong La?** is a choice-driven mountain survival and cultural respect simulator powered entirely by a small language model. Instead of a generic B2B chatbot, players step into the hiking boots of a tourist navigating high-altitude Himalayan trail of Thorong La in Annapurna Circuit.
-
-Your guide through this perilous journey? YakGPT, the world's most sarcastic, judgmental, yet fiercely protective local trail yak. *(In its current state? Nah!!)* 🙅‍♂️
-
-While the Yak delivers brutal, comedic roasts about your flatlander decision-making, an underlying stateful simulation rigorously tracks real-world trekking physiology: Altitude, Acclimatization, and Guide Trust. Make reckless choices to save time, and your vitals drop alongside your Sherpa's respect. Can you survive the high passes, or will you be humbled by the mountain?
-
-# 💡 The Inspiration & Real-World Impact
-Every trekking season, hundreds of tourists endanger their lives and the lives of local Sherpas and guides by ignoring altitude warning signs, rushing schedules, or disregarding indigenous mountain knowledge. Even my friends and families love to hike and trek in their free time and they don't have appropriate knowledge. Since the Nepalese are not required to make avail of guides, many chose not to to save money, making them more at risks than tourists! So I wanted to build a fun, unique game for my friends and families that teaches the players to understand the risk of travelling, to understand the signs of weather and to plan the trek accordingly.
-
-## 🛠️ Key Features:
-
-### The Sarcastic Narrator Engine: 
-*(Still not decided how to proceed)* Powered by a quantized small open-weights model, YakGPT handles environmental narration, dynamic game forks, and localized comedic roasts with a rich, authentic Nepalese texture (tea houses, dal bhat power, suspension bridge protocols).
-
-### Stateful Telemetry Dashboard:
-*(Needs refining)* A tailored Gradio UI that replaces standard chat inputs with an interactive survival dashboard. Track hidden and visible stats in real-time, including Oxygen Levels, Altitude (m), and Guide Trust.
-
-### The Unforgiving Mountain Simulator:
-*(blah, blah, blah)* 😴 The text adventure handles physiological consequences realistically. Skipping acclimatization days will trigger simulated Acute Mountain Sickness (AMS), and losing your guide's trust will cut you off from life-saving advice when blizzards hit.
-
-### The Guide's Private Journal:
-*(Currently a basic journal system)* A hidden log feature allowing players to see exactly what their local guide secretly thinks of their behavioral choices.
-
-## 🧬 Technical Stack & Constraints
-  
-### Model:
-Lightweight open-weights model, Llama-3.1-128k-Dark-Planet-Uncensored-8B-GGUF, optimized for text-generation and running entirely within the resource budget.  
-
-### UI Framework:
-Crafted with Gradio gr.Blocks for a custom, grid-based layout that breaks away from traditional conversational AI patterns.
+**Track Submission:** 🍄 An Adventure in Thousand Token Wood
 
 ---
 
+## 📖 Summary
+**YakGPT: Can You Survive Thorong La?** is a choices-matter high-altitude mountain survival simulator. You play as a slightly reckless tourist navigating the treacherous Himalayan Annapurna Circuit pass of Thorong La. 
 
-### For using models locally in llama.cpp:
-Follow this guide to download and install Nvidia dependencies like **CUDA Toolkit**: https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#cuda
+Your guide? **Tashi the Yak**, the world's most sarcastic, judgmental, and world-weary local pack animal. While Tashi serves brutal comedic roasts about your flatlander decision-making, an underlying stateful simulation rigorously tracks real-world trekking physiology. 
 
-We build **llama.cpp** from scratch to enable CUDA Acceleration. 
+Make reckless choices to save time, and your vitals drop alongside your Sherpa's respect. Can you survive the pass, or will you end up as a frozen warning sign for future tourists?
 
-Since the build doesnt support gcc-16, I had to first install version 15 of GCC and exported the variables as:
+---
+
+## 💡 The Inspiration & Real-World Impact
+Every trekking season, hundreds of tourists endanger themselves and local guides by ignoring altitude warnings, rushing schedules, or disrespecting indigenous mountain wisdom. Many Nepalese locals and tourists hike without guides to save money, placing them at extreme risk.
+
+I built YakGPT to teach players about **Acute Mountain Sickness (AMS)**, weather cues, and proper trail planning in a fun, sarcastic, and unforgettable way.
+
+---
+
+## 🏗️ Project Architecture
+
+YakGPT is built as a stateful, event-driven web application. It rejects basic chatbot conversations in favor of a full-fledged survival dashboard.
+
+```mermaid
+graph TD
+    A[Frontend: Custom HTML/CSS/JS Dashboard] -->|User Selection| B(FastAPI Backend Endpoints)
+    B -->|State Payload| C[LangGraph Gameplay Engine]
+    C --> D[prepare_turn_context]
+    D --> E[apply_deterministic_rules]
+    E --> F[generate_llm_narrations]
+    F -->|Local LLM / Serverless API| G[LLM Provider Factory]
+    F -->|ONNX TTS Engine| H[Kokoro Audio Generation]
+    F --> I[build_events]
+    I -->|Next State & Audio URI| A
 ```
+
+### 1. The Frontend
+A premium, responsive survival dashboard served as static HTML/CSS/JS. No standard chat input box here—players interact using dynamic choice cards, tracking their telemetry in real-time.
+
+### 2. The FastAPI Backend (`app.py`)
+Exposes REST endpoints that act as the bridge between the browser UI and the state machine. It handles game instantiation, action processing, and assets routing.
+
+### 3. The LangGraph Engine (`backend/graph/nodes.py`)
+The gameplay logic is controlled by a stateful graph:
+*   **Context Prep (`prepare_turn_context`)**: Resets flags, advances micro-turn counters, and tracks day/night loops.
+*   **Deterministic Physics (`apply_deterministic_rules`)**: Simulates physiological effects (oxygen saturation drops, storm pressure escalation, health depletion).
+*   **Dynamic Narrations (`generate_llm_narrations`)**: Triggers three parallel/sequential prompts:
+    1.  *Yak Narration*: Tashi roasting your decisions.
+    2.  *Atmosphere text*: The environment's oppressive feedback.
+    3.  *Sherpa's Journal*: Dorje’s private log.
+*   **Event Builder (`build_events`)**: Generates choices based on your current location and altitude.
+
+---
+
+## 🎮 The Gameplay Engine & Physics
+Survival isn't just a gimmick; the engine tracks real-world trekking telemetry:
+
+| Metric | Description | What happens if it goes wrong? |
+| :--- | :--- | :--- |
+| **Altitude** | How high up the mountain you are. | Oxygen decreases, AMS risk multiplies exponentially. |
+| **Health** | Your general physical state. | If this hits 0, you become permanent mountain decorations. |
+| **Energy** | Vitality reserves. | Dropping too low reduces recovery and makes you vulnerable. |
+| **Acclimatization** | Your body's adjustment to thin air. | Rushing upwards without taking rest days triggers AMS. |
+| **Guide Trust** | Your guide Dorje's respect for you. | If trust is low, Dorje will refuse to share life-saving advice when the storm hits. |
+| **Storm Pressure** | The creeping blizzard coming up behind you. | If you stay in one spot too long, you'll be swallowed by a whiteout. |
+
+---
+
+## 🧠 The Brains: Models & Inference
+
+YakGPT uses two completely different LLM execution architectures depending on where you run it:
+
+```
+                  ┌───────────────────────┐
+                  │   YakGPT Game Loop    │
+                  └───────────┬───────────┘
+                              │
+               ┌──────────────┴──────────────┐
+               ▼                             ▼
+        [ LOCAL RUNNING ]             [ HF SPACE RUNNING ]
+     llama.cpp Local Server          HF Serverless API
+     Quantized Q4 GGUF (8B)        Remote API Endpoint (7B)
+     Zero Latency (Offloaded)      Zero Setup / Token Free
+```
+
+### 1. Narrative Generation (LLMs)
+
+#### 🏡 Local Development: `llama.cpp`
+*   **Model**: `Llama-3.1-128k-Dark-Planet-Uncensored-8B-GGUF` (renamed as `dark-planet-8b.gguf` in config).
+*   **Execution**: Run locally on your host using `llama.cpp`'s high-performance server. The backend queries it locally via the `openai` compatible standard endpoint (`http://localhost:8080/v1`).
+*   **CUDA Offloading**: Build `llama.cpp` with CUDA support to offload model layers directly to your local GPU for rapid response times.
+
+#### ☁️ Production Deployment (Hugging Face Spaces): Serverless Inference API
+*   **Model**: `Qwen/Qwen2.5-7B-Instruct`
+*   **Execution**: To avoid massive container memory footprints (preventing CPU OOM crashes) and the high latency/quota consumption of ZeroGPU, the Space utilizes the **Hugging Face Serverless Inference API**. 
+*   **Benefits**: Runs on HF's premium GPU clusters, handles token streaming out-of-the-box, has zero startup delay, and is completely free.
+
+### 2. Audio Engine (Text-to-Speech)
+*   **Model**: `Kokoro-82M` (Kokoro v1.0 ONNX).
+*   **Execution**: Runs completely locally inside the container on the CPU (`CPUExecutionProvider`) using `kokoro-onnx`.
+*   **Voice**: `bm_george` (A delightfully dry British male voice, adding a posh flavor to Tashi's sarcasm).
+*   **Audio Format**: Audio is synthesized entirely in RAM and returned to the frontend as a Base64 WAV URI.
+
+---
+
+## 🛠️ Setup & Local Running
+
+### Prerequisite: Build `llama.cpp` with CUDA (Local Only)
+To get fast, GPU-accelerated local narration, download and install the **CUDA Toolkit**, then compile `llama.cpp`:
+```bash
+# Setup gcc compiler path if using modern Linux environments
 export CC=/usr/bin/gcc-15
 export CXX=/usr/bin/g++-15
 export CUDAHOSTCXX=/usr/bin/g++-15
-```
 
-We can configure CMake to generate build instructions in **Ninja** instead of Makefiles (makes build a hella lot faster!). And then we build with parallelism (12 cores in my case!):
-```
+# Build using CMake with CUDA offloading enabled
 cmake -B build -G Ninja -DGGML_CUDA=ON
 cmake --build build -j12
 ```
-Then for actual testing, I am using **Llama-3.1-128k-Dark-Planet-Uncensored-8B-GGUF** (renamed here) from Huggingface: https://huggingface.co/DavidAU/Llama-3.1-128k-Dark-Planet-Uncensored-8B-GGUF, which is a **Llama 3.1** model with an **8B parameters** architecture, a maximum context window of **128k tokens**, and is quantized to **4-bits** using the **Q4_K_M** method.
+
+Download the model `Llama-3.1-128k-Dark-Planet-Uncensored-8B-GGUF` and launch the local server:
+```bash
+./build/bin/llama-cli -m ~/models/llama/dark-planet-8b.gguf -ngl 32 -p "Hello!"
 ```
-./build/bin/llama-cli -m  ~/dark-planet-8b.gguf -ngl 32 -p "Hello, explain cuda offloading"
-```
 
-### For audio-based model
-The narration is done using **Kokoro-82M** model, which is executed locally via the **ONNX Runtime** (`kokoro-onnx`).
+### Installation
+1. Clone this repository.
+2. Install Python 3.12 dependencies using `uv` (recommended) or pip:
+   ```bash
+   uv sync
+   ```
+3. Copy `.env.example` to `.env` and configure your active LLM provider:
+   ```env
+   LLM_PROVIDER=llama.cpp  # Change to "huggingface" for Serverless
+   HF_TOKEN=your_token_here
+   ```
+4. Run the development server:
+   ```bash
+   python app.py
+   ```
 
-Installation instruction can be found here: https://github.com/nazdridoy/kokoro-tts/
+---
 
-Currently, the voice being used is `bm_george`, a British Male voice profile. The model runs completely on CPU using **CPU Execution Provider** (`CPUExecutionProvider`).
+## 🚀 Hugging Face Space Configuration
+When deploying this project to Hugging Face Spaces:
+1. Ensure the Space settings are configured with **Docker SDK** pointing to our `Dockerfile`.
+2. Add your `HF_TOKEN` as a **Secret** in your Hugging Face Space settings.
+3. Configure the Space's Environment variables:
+   *   `LLM_PROVIDER=huggingface`
+   *   `HF_MODEL_NAME=Qwen/Qwen2.5-7B-Instruct`
