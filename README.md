@@ -1,4 +1,4 @@
-   ---
+---
    title: YakGPT
    emoji: 🦀
    colorFrom: purple
@@ -8,7 +8,7 @@
    python_version: '3.12'
    pinned: false
    license: mit
-   ---
+---
 
    *Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference*
 
