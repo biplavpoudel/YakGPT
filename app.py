@@ -8,6 +8,8 @@ import gradio as gr
 
 # Import your original streaming router
 from backend.api.game_routes import router as game_router
+# Import tts engine to top of the file
+from backend.graph.nodes import get_kokoro_tts
 
 # 1. Initialize the standard FastAPI app that you already know works perfectly
 app = FastAPI()
@@ -35,6 +37,15 @@ async def serve_game_ui():
 with gr.Blocks(title="YakGPT Engine Panel") as demo:
     gr.Markdown("# 🦬 YakGPT Game Engine Status: Operational")
     gr.Markdown("Our custom HTML frontend is running at the root domain (`/`).")
+
+# 6. Directly call the initialization function cleanly in the root scope of the file.
+# This runs immediately when Uvicorn imports app.py, long before the server accepts traffic!
+print("🏔️ Pre-loading Kokoro ONNX voice engine to eliminate first-turn latency...")
+try:
+    get_kokoro_tts()
+    print("🔊 Kokoro ONNX model loaded into memory successfully.")
+except Exception as e:
+    print(f"⚠️ TTS Warmup skipped or encountered an error: {e}")
 
 # 6. Mount Gradio cleanly out of the way on a sub-route (e.g., /admin or /dashboard)
 app = gr.mount_gradio_app(app, demo, path="/admin")

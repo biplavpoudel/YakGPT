@@ -53,7 +53,8 @@ def _str(val: Any) -> str:
 def _invoke(chain: Any, inputs: Dict[str, Any], fallback_text: str) -> str:
     """Invokes the LLM chain with a try-except wrapper as a safety net."""
     try:
-        result = chain.with_config(config={"timeout": 4.0}).invoke(inputs)
+        timeout = float(os.getenv("LLM_TIMEOUT", "15.0"))
+        result = chain.with_config(config={"timeout": timeout}).invoke(inputs)
         return _str(result)
     except Exception as e:
         print(f"[FALLBACK TRIGGERED] LLM Error or Timeout: {e}")

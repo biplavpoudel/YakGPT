@@ -209,7 +209,7 @@ SCENARIOS: Dict[int, List[Dict[str, Any]]]= {
                     "deltaEnergy": -20,
                     "deltaTrust": 15,
                     "deltaStorm": 5,
-                    "consumeItem": "rations",
+                    "consumeItem": "food",
                     "travel": True
                 },
                 {
@@ -299,7 +299,7 @@ SCENARIOS: Dict[int, List[Dict[str, Any]]]= {
                     "deltaEnergy": -15,
                     "deltaTrust": 15,
                     "deltaStorm": 0,
-                    "consumeItem": "rations",
+                    "consumeItem": "food",
                     "travel": True
                 },
                 {

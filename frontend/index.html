@@ -16,6 +16,19 @@
   <link rel="stylesheet" href="/frontend/index.css">
 </head>
 <body>
+<div class="start-screen active" id="startScreen">
+  <div class="start-bg" id="startBg"></div>
+  <div class="start-overlay-dark"></div>
+  <div class="start-content">
+    <h1 class="start-title">YakGPT</h1>
+    <p class="start-subtitle">Can You Survive Thorong La?</p>
+    <p class="start-description">
+      A text-based Himalayan survival simulation. Face the thinning air, the freezing wind, 
+      and the sarcastic, world-weary judgment of Tashi, your pack yak.
+    </p>
+    <button class="start-btn" id="startTrekBtn">Start Trek</button>
+  </div>
+</div>
 <div class="game-container" id="gameContainer">
   <!-- SCENE HEADER -->
   <div class="scene-header">
@@ -270,7 +283,10 @@
           </div>
           <div class="yak-bubble">
             <div class="yak-name-row">
-              <span class="yak-name">YakGPT: Mountain Narrator</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="yak-name">YakGPT: Mountain Narrator</span>
+                <button class="audio-btn" id="playAudioBtn" style="display: none;" onclick="replayYakAudio()">🔊</button>
+              </div>
               <span class="yak-mood" id="yakMood">Mildly contemptuous</span>
             </div>
             <div class="yak-text" id="yakText">

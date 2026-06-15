@@ -77,7 +77,7 @@ async def run_game_stream(client_state: Dict[str, Any]) -> AsyncGenerator[str, N
         typed_state["latest_choice_index"] = client_state["latest_choice_index"]
 
     # 4. Initialize or retain persistent inventory counters
-    typed_state["inventory"] = client_state.get("inventory", {"water": 3, "diamox": 2, "rations": 2})
+    typed_state["inventory"] = client_state.get("inventory", {"water": 3, "diamox": 2, "food": 2, "layers": 1})
     
     try:
         # Pass the bridged dictionary state down into your graph runner
@@ -104,7 +104,7 @@ async def run_game_stream(client_state: Dict[str, Any]) -> AsyncGenerator[str, N
             "relationshipTier": result.get("relationshipTier") or "Wary Observer",
             "tensionModifier":  result.get("tensionModifier") or "Low-Stakes",
             "shortHistoryLog":  result.get("shortHistoryLog") or [],
-            "inventory":        result.get("inventory", {"water": 3, "diamox": 2, "rations": 2})
+            "inventory":        result.get("inventory", {"water": 3, "diamox": 2, "food": 2, "layers": 1})
         },
     })
     await asyncio.sleep(0.02)

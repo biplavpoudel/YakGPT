@@ -5,7 +5,7 @@ import { renderChoices, getSelectedChoiceIndex,
          resetSelectedChoice, getSelectedChoiceText }   from './render/choices.js';
 import { renderScene, triggerEndscreen,
          updateSceneNarration, markStreamAsComplete, 
-         resetTypewriter }                              from './render/scene.js';
+         resetTypewriter, playYakAudio }                from './render/scene.js';
 import { updateVitals }                                from './render/vitals.js';
 import { addJournalEntry, clearJournal }               from './render/journal.js';
 import { LOCATIONS, SCENARIOS }                        from './data.js';
@@ -103,6 +103,49 @@ async function takeStep() {
     btn.disabled    = false;
     btn.textContent = 'Confirm & Continue →';
     resetSelectedChoice();
+    setYakLoading(false);
+    setSituationLoading(false);
+  }
+}
+
+// ============================================================
+// INITIAL NARRATION FETCH
+// ============================================================
+async function fetchInitialNarration() {
+  setYakLoading(true);
+  setSituationLoading(true);
+
+  try {
+    const res = await fetch('/play', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: { ...gameState, latest_choice_index: -1 } }),
+    });
+    if (!res.ok) throw new Error(`Backend error: ${res.status}`);
+
+    const reader = res.body.getReader();
+    const dec    = new TextDecoder();
+    let    buf    = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const parts = buf.split('\n');
+      buf = parts.pop() ?? '';
+      for (const line of parts) {
+        if (!line.trim()) continue;
+        let ev;
+        try { ev = JSON.parse(line); } catch { continue; }
+        if (ev?.type) EventBus.emit(ev.type, ev.payload);
+      }
+    }
+
+    markStreamAsComplete('yakText');
+
+  } catch (err) {
+    console.error('[fetchInitialNarration]', err);
+  } finally {
     setYakLoading(false);
     setSituationLoading(false);
   }
@@ -244,6 +287,10 @@ function restartGame() {
   gameState = structuredClone(INITIAL_STATE);
   clearJournal();
 
+  // Hide the play audio button on restart
+  const playBtn = document.getElementById('playAudioBtn');
+  if (playBtn) playBtn.style.display = 'none';
+
   document.querySelectorAll('#knowledgePanel .knowledge-item.dynamic').forEach(el => el.remove());
   document.querySelectorAll('.endscreen').forEach(el => el.classList.remove('active'));
   document.getElementById('gameContainer')?.setAttribute('class', 'game-container');
@@ -258,6 +305,7 @@ function restartGame() {
   updateWeatherFromState(gameState);
   updateInventoryDOM();
   switchTab('trail');
+  fetchInitialNarration();
 }
 
 // ============================================================
@@ -329,8 +377,19 @@ function initEventBindings() {
 
   EventBus.on('narration', data => {
     if (!data) return;
+    // Persist narration data in session state to avoid LLM regeneration on refresh/resume
+    gameState.lastNarration = data;
+    sessionStorage.setItem('yak_game_state', JSON.stringify(gameState));
+
     updateSceneNarration(data, gameState.guideTrust);
     if (data.journal) addJournalEntry(data.journal);
+
+    // Toggle the play audio button visibility based on whether audio exists
+    const audioSource = data.audio || data.current_yak_audio;
+    const playBtn = document.getElementById('playAudioBtn');
+    if (playBtn) {
+      playBtn.style.display = audioSource ? 'inline-block' : 'none';
+    }
   });
 
   EventBus.on('choices', choices => {
@@ -342,6 +401,8 @@ function initEventBindings() {
     triggerEndscreen(type);
     renderEndRows(type); 
   });
+
+  EventBus.on('done', () => {});
 }
 
 // ============================================================
@@ -353,6 +414,12 @@ window.openInventoryModal  = openInventoryModal;
 window.closeInventoryModal = closeInventoryModal;
 window.useItem             = useItem;
 window.switchTab           = switchTab;
+window.replayYakAudio      = () => {
+  const audioSource = gameState.lastNarration?.audio || gameState.lastNarration?.current_yak_audio;
+  if (audioSource) {
+    playYakAudio(audioSource);
+  }
+};
 
 // ============================================================
 // ON BOOT
@@ -361,10 +428,22 @@ document.addEventListener('DOMContentLoaded', () => {
   initEventBindings();
 
   const savedState = sessionStorage.getItem('yak_game_state');
+  const startBtn = document.getElementById('startTrekBtn');
+
   if (savedState) {
     try {
       gameState = JSON.parse(savedState);
       console.log("🏔️ Session data restored from cache framework:", gameState);
+      if (startBtn) startBtn.textContent = 'Resume Trek';
+
+      // Restore play audio button visibility if saved audio exists
+      if (gameState.lastNarration) {
+        const audioSource = gameState.lastNarration.audio || gameState.lastNarration.current_yak_audio;
+        const playBtn = document.getElementById('playAudioBtn');
+        if (playBtn) {
+          playBtn.style.display = audioSource ? 'inline-block' : 'none';
+        }
+      }
     } catch (e) {
       console.error("Session serialization breakdown, falling back to clean initialization.", e);
       gameState = structuredClone(INITIAL_STATE);
@@ -373,9 +452,56 @@ document.addEventListener('DOMContentLoaded', () => {
     gameState = structuredClone(INITIAL_STATE);
   }
 
+  // Set dynamic background image on start screen based on current locationIndex
+  const startBg = document.getElementById('startBg');
+  if (startBg) {
+    const locImages = [
+      '/scenes/manang.jpg',
+      '/scenes/yak-kharkha.jpg',
+      '/scenes/thorong-phedi.jpg',
+      '/scenes/high-camp.jpg',
+      '/scenes/thorong-la.jpg',
+      '/scenes/victory.jpg'
+    ];
+    const imgUrl = locImages[gameState.locationIndex] ?? locImages[0];
+    startBg.style.backgroundImage = `url('${imgUrl}')`;
+  }
+
+  // Clear stale backend choices before rendering local fallback choices
+  delete gameState.current_choices;
+
   renderScene(gameState, LOCATIONS, SCENARIOS);
   updateVitals(gameState);
   updateTrailFromState(gameState);
   updateWeatherFromState(gameState);
   updateInventoryDOM();
+
+  // Force-render choices from static scenario data for the current position
+  const bootScenarios = SCENARIOS[gameState.locationIndex] ?? SCENARIOS[0];
+  if (Array.isArray(bootScenarios)) {
+    const bootScen = bootScenarios[gameState.subTurnIndex ?? 0] ?? bootScenarios[0];
+    if (bootScen?.choices) renderChoices(bootScen.choices, gameState.guideTrust);
+  }
+
+  if (startBtn) {
+    startBtn.onclick = () => {
+      const overlay = document.getElementById('startScreen');
+      if (overlay) overlay.classList.add('fade-out');
+
+      console.log("[startBtn.onclick] resuming session? lastNarration:", gameState.lastNarration);
+
+      if (gameState.lastNarration) {
+        // Resume session: Restore saved UI content and trigger audio playback
+        updateSceneNarration(gameState.lastNarration, gameState.guideTrust);
+        markStreamAsComplete('yakText');
+        if (gameState.lastNarration.journal) {
+          clearJournal();
+          addJournalEntry(gameState.lastNarration.journal);
+        }
+      } else {
+        // Fresh session: Fetch narration from backend
+        fetchInitialNarration();
+      }
+    };
+  }
 });

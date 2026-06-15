@@ -1,7 +1,6 @@
 // ============================================================
 // CHOICES RENDERER (RPG 3-Tier Risk Color-Coded)
 // ============================================================
-import { EventBus } from '../core/event.js';
 
 // selectedChoiceIndex lives here — choices.js owns this state
 let selectedChoiceIndex = -1;
@@ -94,9 +93,6 @@ function selectChoice(btn, idx) {
 
   const stepBtn = document.getElementById('stepBtn');
   if (stepBtn) stepBtn.disabled = false;
-
-  // Emit so index.js knows a choice was made
-  EventBus.emit('choice_selected', idx);
 }
 
 // ============================================================

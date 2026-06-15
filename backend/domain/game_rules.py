@@ -63,6 +63,14 @@ def apply_game_rules(state: GameState) -> GameState:
         state["endState"] = "victory"
         return state
 
+    # If this is the initial/intro turn (sentinel choice index -1),
+    # skip choice mutation and just calculate metadata
+    latest_choice = state.get("latest_choice_index")
+    if latest_choice == -1:
+        state = compute_narrative_metadata(state)
+        state["endState"] = state.get("endState")
+        return state
+
     choice_idx: int = state.get("latest_choice_index") or 0
     loc_idx:    int = state.get("locationIndex")       or 0
     sub_idx:    int = state.get("subTurnIndex")        or 0
@@ -92,7 +100,7 @@ def apply_game_rules(state: GameState) -> GameState:
     # --------------------------------------------------------
     item_to_consume = choice.get("consumeItem")
     inventory: Dict[str, int] = dict(
-        state.get("inventory") or {"water": 3, "diamox": 2, "rations": 2, "layers": 1}
+        state.get("inventory") or {"water": 3, "diamox": 2, "food": 2, "layers": 1}
     )
     
     item_bonus_acclim = 0

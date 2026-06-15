@@ -143,12 +143,16 @@ export function updateSceneNarration(data, currentGuideTrust = 100) {
     renderChoices(data.choices, currentGuideTrust);
   }
 
+  const audioSource = data.audio || data.current_yak_audio;
+  playYakAudio(audioSource);
+}
+
+export function playYakAudio(audioSource) {
   if (activeYakAudio) {
     activeYakAudio.pause();
     activeYakAudio = null;
   }
 
-  const audioSource = data.audio || data.current_yak_audio;
   if (audioSource) {
     try {
       activeYakAudio = new Audio(audioSource);
@@ -265,4 +269,4 @@ export function updateEndNarration(type, text) {
   const id = 'endNarration' + type.charAt(0).toUpperCase() + type.slice(1);
   const el = document.getElementById(id);
   if (el && text) el.textContent = text;
-}``
+}

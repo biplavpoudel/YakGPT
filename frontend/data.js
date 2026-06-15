@@ -10,72 +10,173 @@ export const LOCATIONS = [
 ];
 
 export const SCENARIOS = [
-  // INDEX 0: MANANG SCENARIOS (Array of sub-turns)
+  // 0: Manang
   [
     {
-      id: "manang_acclimatization",
-      fact: "Acclimatization at Manang is critical to prevent Acute Mountain Sickness.",
-      peerEvent: null,
+      id: "manang_hub",
+      context: "altitude_acclimatization",
+      fact: "Acclimatization hikes to Ice Lake or attending the Himalayan Rescue Association clinic trains the cardiorespiratory matrix.",
+      peerEvent: "Dorje points up at the jagged ridgelines. Cloud formations are twisting dangerously around the upper peaks.",
       choices: [
-        { type: "safe",     text: "Take an acclimatization hike and sleep at Manang.", consequence: "Improves adaptation to altitude." },
-        { type: "risky",    text: "Push directly to Yak Kharka.",                        consequence: "Reduced acclimatization increases risk." },
-        { type: "reckless", text: "Skip ahead to Thorong Phedi in one push.",            consequence: "Severe altitude stress likely." }
+        {
+          text: "Check into a local tea house inn, spend 100 rupees on ginger tea, and rest to adjust to the altitude drop.",
+          consequence: "Rest and slowly acclimate to 3,540 meters."
+        },
+        {
+          text: "Attend the free evening medical brief at the Himalayan Rescue Association (HRA) clinic to learn about HAPE/HACE warning signs.",
+          consequence: "Learn to identify lung rattling and visual cognitive alignment drops."
+        },
+        {
+          text: "Ignore the rest suggestions. Pack your heavy pack and hit the rocky trail upward toward Yak Kharka immediately.",
+          consequence: "Skip safety rest protocols and push high alpine elevations."
+        }
+      ]
+    },
+    {
+      id: "manang_departure_gate",
+      context: "trail_exit",
+      fact: "Leaving a high-altitude baseline village without a clear tracking window leaves you vulnerable to sudden freezing winds.",
+      peerEvent: "A local porter warns that loose slate slides are falling along the higher tracks past Gunsang.",
+      choices: [
+        {
+          text: "Stay another afternoon at the lodge to double-check gear straps and drink boiled water rations.",
+          consequence: "Delay trail departure to perform safety checks."
+        },
+        {
+          text: "Pop a prophylactic pill of Diamox from your medical pouch to accelerate red blood cell oxygenation, then begin the steady ascent.",
+          consequence: "Use Diamox to accelerate oxygenation and begin ascent."
+        },
+        {
+          text: "Lace your boots, bypass the medicine check, and start hiking the steep switchback slopes to the upper alpine pastures.",
+          consequence: "Begin ascent directly into high-altitude zones without medicine."
+        }
       ]
     }
   ],
-
-  // INDEX 1: YAK KHARKA SCENARIOS
+  // 1: Yak Kharka
   [
     {
-      id: "yak_kharka_symptoms",
-      fact: "Headache above 3000m is a primary symptom of AMS.",
-      peerEvent: "A fellow trekker is showing early nausea symptoms.",
+      id: "yak_kharka_dilemma",
+      context: "moral_dilemma",
+      fact: "Hypothermia and dehydration mask themselves as simple exhaustion in the high alpine wilderness.",
+      peerEvent: "An unguided duo is stranded outside a windswept stone wall shelter. One is shivering violently, completely missing a glove.",
       choices: [
-        { type: "safe",     text: "Report symptoms to Dorje and rest.",       consequence: "Proper rest improves recovery." },
-        { type: "risky",    text: "Take medication and hide symptoms.",        consequence: "Symptoms masked but risk remains." },
-        { type: "reckless", text: "Ignore symptoms and continue ascent.",      consequence: "High risk of altitude complications." }
+        {
+          text: "Open your pack, hand them 1 unit of your precious boiling water rations, and give them advice on wind shelter.",
+          consequence: "Consume water to aid stranded team, gaining Dorje's trust."
+        },
+        {
+          text: "Refuse to open your pack resources. Wave them toward the lower valley, and step straight inside the heated tea house common room.",
+          consequence: "Prioritize personal resources; lose Dorje's trust."
+        },
+        {
+          text: "Hunker down inside the stable compound, pay the lodge owner for an extra night, and avoid moving up the freezing trail.",
+          consequence: "Rest at Yak Kharka to shelter from biting winds."
+        }
+      ]
+    },
+    {
+      id: "yak_kharka_trail_leave",
+      context: "ams_escalation",
+      fact: "Hiding deep throbbing neural headaches at 4,000 meters accelerates internal capillary leaking into brain tissue (HACE).",
+      peerEvent: "Your vision blurs slightly as you lace your boots. Dorje looks closely at your pupils, holding a tracking oximeter.",
+      choices: [
+        {
+          text: "Confess that your head is pounding. Ask Dorje to check your vitals and rest here for another calendar weather cycle.",
+          consequence: "Admit AMS symptoms to the guide and take safety hold."
+        },
+        {
+          text: "Drink a bottle of pure water to alleviate the brain pressure and push forward up the steep canyon trail toward Thorong Phedi.",
+          consequence: "Consume water to combat headache and ascend to Thorong Phedi."
+        },
+        {
+          text: "Lie directly to Dorje, hide your heavy gasping breathing, and force yourself onto the vertical scree trail without using supplies.",
+          consequence: "Conceal severe exhaustion and force ascent."
+        }
       ]
     }
   ],
-
-  // INDEX 2: THORONG PHEDI SCENARIOS
+  // 2: Thorong Phedi
   [
     {
-      id: "thorong_phedi_preparation",
-      fact: "Early morning starts reduce storm exposure risk at Thorong La.",
-      peerEvent: "Experienced trekkers prepare gear quietly before dawn.",
+      id: "phedi_base_camp",
+      context: "weather_window_gamble",
+      fact: "Gales funneling between the high mountain valleys routinely create zero-visibility whiteouts by mid-morning.",
+      peerEvent: "The mountain lodge at Phedi is buzzing with nervous energy. Trekkers are debating whether to sleep here or push to High Camp.",
       choices: [
-        { type: "safe",     text: "Sleep early and start at 3am with guide.", consequence: "Optimal weather window usage." },
-        { type: "risky",    text: "Start at 5am like most groups.",           consequence: "Narrower weather margin." },
-        { type: "reckless", text: "Leave immediately despite conditions.",     consequence: "High exposure to unstable weather." }
+        {
+          text: "Secure a bed in the stone bunkhouse at Phedi, eat a heavy bowl of dal bhat, and refuse to step onto the exposed vertical moraine.",
+          consequence: "Sleep at Thorong Phedi to protect lungs from extreme sub-zero exposure."
+        },
+        {
+          text: "Munch on emergency rations from your pockets to restore glucose levels, pack your headlamp, and begin the brutal 400-meter climb to High Camp.",
+          consequence: "Consume food and make a punishing scramble to High Camp."
+        },
+        {
+          text: "Force your way directly up the freezing ice switchbacks instantly without checking gear settings or taking caloric nourishment.",
+          consequence: "Attempt dangerous scramble to High Camp completely unhydrated."
+        }
       ]
     }
   ],
-
-  // INDEX 3: HIGH CAMP SCENARIOS
+  // 3: High Camp
   [
     {
-      id: "high_camp_coordination",
-      fact: "Loss of coordination may indicate early HACE.",
-      peerEvent: null,
+      id: "high_camp_crisis",
+      context: "hypoxia_delirium",
+      fact: "Loss of motor control or stumbling at 4,800m means your brain is swelling from a lack of oxygen atmospheric pressure.",
+      peerEvent: "Freezing gale-force winds are tearing violently at the corrugated tin roofs of the high shelter huts.",
       choices: [
-        { type: "safe",     text: "Perform coordination test and follow guide pace.", consequence: "Early detection reduces risk." },
-        { type: "risky",    text: "Skip self-check and proceed normally.",             consequence: "Hidden risk may escalate." },
-        { type: "reckless", text: "Rush ahead to stay warm.",                         consequence: "Severe energy depletion." }
+        {
+          text: "Admit you are losing your physical coordination. Rely entirely on Dorje to lash your crampons and set a slow, defensive pace.",
+          consequence: "Surrender field autonomy to Dorje due to coordination loss."
+        },
+        {
+          text: "Take a heavy dose of Diamox to chemically force your lungs to process the thin air, then hunker down inside the stone common room.",
+          consequence: "Consume Diamox and rest before the pass day."
+        },
+        {
+          text: "Ignite your headlamp at 3:00 AM, swallow a water ration, and step blindly into the pitch-black freezing void toward the summit marker.",
+          consequence: "Consume water and start high pass push in pitch darkness."
+        }
       ]
     }
   ],
-
-  // INDEX 4: THORONG LA SCENARIOS
+  // 4: Thorong La Pass
   [
     {
-      id: "thorong_la_summit",
-      fact: "Thorong La is the highest and most exposed point of the circuit.",
-      peerEvent: null,
+      id: "summit_climax",
+      context: "survival_threshold",
+      fact: "The human brain loses critical rational decision judgment within minutes of extended exposure to extreme high alpine winds.",
+      peerEvent: "The prayer flags are screaming in the wind. The cold is a physical wall. Your fingers are completely numb.",
       choices: [
-        { type: "safe",     text: "Brief summit stop and immediate descent.", consequence: "Correct high-altitude behavior." },
-        { type: "risky",    text: "Stay 30 minutes to take photos.",          consequence: "Increased exposure to cold and wind." },
-        { type: "reckless", text: "Attempt to camp at the summit.",           consequence: "Extreme survival risk." }
+        {
+          text: "Touch the chorten marker sign briefly, bypass photos, and run down the long, knee-shattering 1,600-meter vertical descent to Muktinath safety.",
+          consequence: "Evacuate high pass summit immediately to mitigate hypothermia."
+        },
+        {
+          text: "Eat your final travel rations to keep your core body temperature from crashing, then begin the technical descent through the glacier field.",
+          consequence: "Consume food and begin descent through glacier field."
+        },
+        {
+          text: "Insist on unpacking your massive heavy cameras, taking off your heavy outer shell gloves, and staging a 30-minute celebratory photoshoot.",
+          consequence: "Delay summit escape for photos, exposing skin to extreme frostbite."
+        }
+      ]
+    }
+  ],
+  // 5: Muktinath
+  [
+    {
+      id: "thorong_la_victory",
+      context: "survival_threshold",
+      fact: "Muktinath offers rich atmospheric oxygen pressure, ancient eternal flame shrines, and safe vehicle access down to Jomsom.",
+      peerEvent: "Dorje extends a frostbitten hand with a deep, emotional smile. You have successfully conquered the pass.",
+      choices: [
+        {
+          text: "Pour a final cup of hot tea, gaze up at the giant snow peaks behind you, and celebrate your survival.",
+          consequence: "Celebrate successful completion of the circuit."
+        }
       ]
     }
   ]
